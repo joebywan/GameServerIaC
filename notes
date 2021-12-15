@@ -1,0 +1,6 @@
+Get default VPC as variable:
+default_vpc_id=$(aws ec2 describe-vpcs \
+    --filters Name=isDefault,Values=true \
+    --query 'Vpcs[*].VpcId' \
+    --output text)
+
