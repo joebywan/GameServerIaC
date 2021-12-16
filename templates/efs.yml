@@ -1,0 +1,58 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: This template creates an Amazon EFS file system and mount target and
+  associates it with Amazon EC2 instances in an Auto Scaling group. **WARNING** This
+  template creates Amazon EC2 instances and related resources. You will be billed
+  for the AWS resources used if you create a stack from this template.
+Parameters:
+  VolumeName:
+    Description: The name to be used for the EFS volume
+    Type: String
+    MinLength: '1'
+    Default: myEFSvolume
+  MountPoint:
+    Description: The Linux mount point for the EFS volume
+    Type: String
+    MinLength: '1'
+    Default: myEFSvolumeMountPoint
+Resources:
+  MountTargetSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId:
+        Ref: VPC
+      GroupDescription: Security group for mount target
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 2049 #2049 is nfs port
+        ToPort: 2049
+        CidrIp: 0.0.0.0/0 #figure out how to get default vpc cidr
+  FileSystem:
+    Type: AWS::EFS::FileSystem
+    Properties:
+      Encrypted: True
+      FileSystemTags:
+      - Key: Name
+        Value:
+          Ref: VolumeName
+  MountTarget:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId:
+        Ref: FileSystem
+      SubnetId:
+        Ref: Subnet
+      SecurityGroups:
+      - Ref: MountTargetSecurityGroup
+    PosixUser:
+      Gid: 1000
+      Uid: 1000
+
+# Outputs:
+#   MountTargetID:
+#     Description: Mount target ID
+#     Value:
+#       Ref: MountTarget
+#   FileSystemID:
+#     Description: File system ID
+#     Value:
+#       Ref: FileSystem
