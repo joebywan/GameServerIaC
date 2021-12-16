@@ -1,8 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: This template creates an Amazon EFS file system and mount target and
-  associates it with Amazon EC2 instances in an Auto Scaling group. **WARNING** This
-  template creates Amazon EC2 instances and related resources. You will be billed
-  for the AWS resources used if you create a stack from this template.
+Description: This template creates an Amazon EFS file system and mount target.
 Parameters:
   VolumeName:
     Description: The name to be used for the EFS volume
@@ -14,6 +11,14 @@ Parameters:
     Type: String
     MinLength: '1'
     Default: myEFSvolumeMountPoint
+  VPC:    #Only needed to pass muster until I get the variables provided when the template's launched
+    Description: VPC id for where the EFS is going
+    Type: String
+    MinLength: '1'
+  Subnet: #Only needed to pass muster until I get the variables provided when the template's launched
+    Description: Subnet id for where the EFS is going
+    Type: String
+    MinLength: '1'   
 Resources:
   MountTargetSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -34,18 +39,30 @@ Resources:
       - Key: Name
         Value:
           Ref: VolumeName
-  MountTarget:
-    Type: AWS::EFS::MountTarget
+  # MountTarget:
+  #   Type: AWS::EFS::MountTarget
+  #   Properties:
+  #     FileSystemId:
+  #       Ref: FileSystem
+  #     SubnetId:
+  #       Ref: Subnet
+  #     SecurityGroups:
+  #     - Ref: MountTargetSecurityGroup
+  #   PosixUser:
+  #     Gid: 1000
+  #     Uid: 1000
+  AccessPoint:
+    Type: AWS::EFS::AccessPoint
     Properties:
-      FileSystemId:
-        Ref: FileSystem
-      SubnetId:
-        Ref: Subnet
-      SecurityGroups:
-      - Ref: MountTargetSecurityGroup
-    PosixUser:
-      Gid: 1000
-      Uid: 1000
+      FileSystemId: !Ref FileSystem
+      PosixUser:
+        Uid: 1000
+        Gid: 1000
+      RootDirectory:
+        CreationInfo: 0755
+        Path: /minecraft
+
+
 
 # Outputs:
 #   MountTargetID:
