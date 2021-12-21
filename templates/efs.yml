@@ -6,27 +6,11 @@ Parameters:
     Type: String
     MinLength: '1'
     Default: myEFSvolume
-  MountPoint:
-    Description: The Linux mount point for the EFS volume
-    Type: String
-    MinLength: '1'
-    Default: myEFSvolumeMountPoint
   VPC:    #Only needed to pass muster until I get the variables provided when the template's launched
     Description: VPC id for where the EFS is going
     Type: String
     MinLength: '1'  
 Resources:
-  MountTargetSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      VpcId:
-        Ref: VPC
-      GroupDescription: Security group for mount target
-      SecurityGroupIngress:
-      - IpProtocol: tcp
-        FromPort: 2049 #2049 is nfs port
-        ToPort: 2049
-        CidrIp: 0.0.0.0/0 #figure out how to get default vpc cidr
   FileSystem:
     Type: AWS::EFS::FileSystem
     Properties:
