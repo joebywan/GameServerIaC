@@ -19,7 +19,7 @@ Resources:
       - Key: Name
         Value:
           Ref: VolumeName
-  AccessPoint:
+  EFSAccessPoint:
     Type: AWS::EFS::AccessPoint
     Properties:
       FileSystemId: 
@@ -32,11 +32,23 @@ Resources:
         Path: /minecraft
   EFSIngress:
     Type: AWS::EC2::SecurityGroupIngress
-      Properties:
-        GroupName: Fn::Sub:
-          - $stuff.DefaultSecurityGroup
-          - { stuff: Ref: VPC}
-        IpProtocol: tcp
-        FromPort: "2049"
-        ToPort: "2049"
-        CidrIp: 0.0.0.0/0
+    Properties:
+      GroupName:
+        Fn::GetAtt: [VPC, DefaultSecurityGroup]
+      IpProtocol: tcp
+      FromPort: "2049"
+      ToPort: "2049"
+      CidrIp: 0.0.0.0/0
+Outputs:
+  ServerEFS:
+    Description: The EFS id
+    Value: 
+      Ref: FileSystem
+    Export:
+      Name: serverEFS
+  EFSAccessPoint:
+    Description: The EFS access point id
+    Value: 
+      Ref: EFSAccessPoint
+    Export:
+      Name: serverEFSAccessPoint
