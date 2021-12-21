@@ -14,11 +14,7 @@ Parameters:
   VPC:    #Only needed to pass muster until I get the variables provided when the template's launched
     Description: VPC id for where the EFS is going
     Type: String
-    MinLength: '1'
-  Subnet: #Only needed to pass muster until I get the variables provided when the template's launched
-    Description: Subnet id for where the EFS is going
-    Type: String
-    MinLength: '1'   
+    MinLength: '1'  
 Resources:
   MountTargetSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -39,37 +35,24 @@ Resources:
       - Key: Name
         Value:
           Ref: VolumeName
-  # MountTarget:
-  #   Type: AWS::EFS::MountTarget
-  #   Properties:
-  #     FileSystemId:
-  #       Ref: FileSystem
-  #     SubnetId:
-  #       Ref: Subnet
-  #     SecurityGroups:
-  #     - Ref: MountTargetSecurityGroup
-  #   PosixUser:
-  #     Gid: 1000
-  #     Uid: 1000
   AccessPoint:
     Type: AWS::EFS::AccessPoint
     Properties:
-      FileSystemId: !Ref FileSystem
+      FileSystemId: 
+        Ref: FileSystem
       PosixUser:
         Uid: 1000
         Gid: 1000
       RootDirectory:
         CreationInfo: 0755
         Path: /minecraft
-
-
-
-# Outputs:
-#   MountTargetID:
-#     Description: Mount target ID
-#     Value:
-#       Ref: MountTarget
-#   FileSystemID:
-#     Description: File system ID
-#     Value:
-#       Ref: FileSystem
+  EFSIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+      Properties:
+        GroupName: Fn::Sub:
+          - $stuff.DefaultSecurityGroup
+          - { stuff: Ref: VPC}
+        IpProtocol: tcp
+        FromPort: "2049"
+        ToPort: "2049"
+        CidrIp: 0.0.0.0/0
