@@ -33,8 +33,7 @@ Resources:
   EFSIngress:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
-      GroupName:
-        Fn::GetAtt: [VPC, DefaultSecurityGroup]
+      GroupName: { "Fn::GetAtt" : ["Ref: VPC", "DefaultSecurityGroup"]
       IpProtocol: tcp
       FromPort: "2049"
       ToPort: "2049"
