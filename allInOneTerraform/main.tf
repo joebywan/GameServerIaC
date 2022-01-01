@@ -159,7 +159,8 @@ resource "aws_iam_policy" "sns_publish" {
   )
 }
 
-data "aws_iam_policy_document" "route53-query-logging-policy" {
+#Making the log policy document to put in the log policy
+data "aws_iam_policy_document" "route53_query_logging_policy" {
   statement {
     actions = [
       "logs:CreateLogStream",
@@ -167,7 +168,7 @@ data "aws_iam_policy_document" "route53-query-logging-policy" {
     ]
 
     resources = [
-      aws_cloudwatch_log_group.aws_route53_hosted_zone
+      aws_cloudwatch_log_group.route53_hosted_zone
     ]
 
     principals {
@@ -177,6 +178,14 @@ data "aws_iam_policy_document" "route53-query-logging-policy" {
       ]
     }
   }
+}
+
+#Creating the log policy using the previously made document
+resource "aws_cloudwatch_log_resource_policy" "route53_query_logging_policy" {
+  provider = aws.us-east-1
+
+  policy_document = data.aws_iam_policy_document.route53_query_logging_policy.json
+  policy_name     = "route53_query_logging_policy"
 }
 
 #------------------------ IAM ROLES -------------------------------------------
@@ -200,7 +209,7 @@ data "aws_iam_policy_document" "ecs_assume_role_policy" {
 #Then we make the role itself
 resource "aws_iam_role" "ECS_role" {
   name = "ecs.task.${var.game_name}-server"
-  assume_role_policy = data.aws_iam_policy_document.ecs_assume_role_policy
+  assume_role_policy = data.aws_iam_policy_document.ecs_assume_role_policy.json
   managed_policy_arns = [
       aws_iam_policy.efs_rw.arn,
       aws_iam_policy.ecs_rw_service,
@@ -228,12 +237,23 @@ data "aws_iam_policy_document" "lambda_assume_role_policy" {
 #Then we make the role itself
 resource "aws_iam_role" "Lambda_role" {
   name = "lambda.${var.game_name}-server"
-  assume_role_policy = data.aws_iam_policy_document.lambda_assume_role_policy
+  assume_role_policy = data.aws_iam_policy_document.lambda_assume_role_policy.json
   managed_policy_arns = [
       aws_iam_policy.ecs_rw_service
     ]
 }
 
+#------------------------------------------------------------------------------
+#Cloudwatch
+#------------------------------------------------------------------------------
+#----- Route53 Query Logging -----
+#Log group for the route53 query logs to be sent to
+resource "aws_cloudwatch_log_group" "route53_hosted_zone" {
+  provider = aws.us-east-1
+
+  name              = "/aws/route53/${var.hosted_zone}"
+  retention_in_days = 3
+}
 #------------------------------------------------------------------------------
 #Route53
 #------------------------------------------------------------------------------
@@ -251,21 +271,19 @@ resource "aws_route53_record" "game_server" {
   name = "${var.game_name}.${var.hosted_zone}"
   type = "A"
   ttl = "30"
-  records = ["1.1.1.1"]
+  records = [
+    "1.1.1.1"
+  ]
 }
-#----- Route53 Query Logging -----
+
 /*
-Yeah it's a cloudwatch resource in the R53 area, sue me. Cloudwatch log group 
-in us-east-1 using the alternate provider to make sure it's in the right region
+Enable query logging to the Cloudwatch log group to provide the data for
+Lambda to trigger
 */
-resource "aws_cloudwatch_log_group" "aws_route53_hosted_zone" {
-  provider = aws.us-east-1
-
-  name              = "/aws/route53/${var.hosted_zone}"
-  retention_in_days = 3
+resource "aws_route53_query_log" "public_hosted_zone" {
+  cloudwatch_log_group_arn = aws_cloudwatch_log_group.route53_hosted_zone.arn
+  zone_id                  = aws_route53_zone.public_hosted_zone.zone_id
 }
-
-#
 
 #------------------------------------------------------------------------------
 #SNS
@@ -329,3 +347,47 @@ resource "aws_lambda_function" "turn_on_server" {
     }
   }
 }
+
+# resource "aws_ecs_task_definition" "game_server" {
+#   family = "${game-name}-server"
+#   container_definitions = jsonencode([
+#     {
+#       name      = "${var.game_name}-server"
+#       image     = "itzg/minecraft-server"
+#       cpu       = 1
+#       memory    = 2048
+#       essential = false
+#       portMappings = [
+#         {
+#           protocol = "tcp"
+#           containerPort = 25565
+#           hostPort      = 25565
+#         }
+#       ]
+#     },
+#     {
+#       name      = "second"
+#       image     = "service-second"
+#       cpu       = 10
+#       memory    = 256
+#       essential = true
+#       portMappings = [
+#         {
+#           containerPort = 443
+#           hostPort      = 443
+#         }
+#       ]
+#     }
+#   ])
+
+#   volume {
+#     name      = "service-storage"
+#     host_path = "/ecs/service-storage"
+#   }
+
+#   placement_constraints {
+#     type       = "memberOf"
+#     expression = "attribute:ecs.availability-zone in [us-west-2a, us-west-2b]"
+#   }
+# }
+
