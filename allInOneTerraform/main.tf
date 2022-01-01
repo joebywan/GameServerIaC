@@ -151,12 +151,32 @@ resource "aws_iam_policy" "sns_publish" {
             "sns:Publish"
           ]
           Resource = [
-            "arn:aws:sns:us-west-2:${data.aws_caller_identity.current.account_id}:${var.game_name}-notifications"
+            aws_sns_topic.server_status_updates.arn
           ]
         }
       ]
     }
   )
+}
+
+data "aws_iam_policy_document" "route53-query-logging-policy" {
+  statement {
+    actions = [
+      "logs:CreateLogStream",
+      "logs:PutLogEvents",
+    ]
+
+    resources = [
+      aws_cloudwatch_log_group.aws_route53_hosted_zone
+    ]
+
+    principals {
+      type        = "Service"
+      identifiers = [
+        "route53.amazonaws.com"
+      ]
+    }
+  }
 }
 
 #------------------------ IAM ROLES -------------------------------------------
@@ -245,7 +265,7 @@ resource "aws_cloudwatch_log_group" "aws_route53_hosted_zone" {
   retention_in_days = 3
 }
 
-
+#
 
 #------------------------------------------------------------------------------
 #SNS
