@@ -44,6 +44,33 @@ variable "lambda_location" {
   default = "./lambda_function.py"
 }
 
+variable "az_suffix" {
+  description = "Provides the availability zone designator"
+  default = ["a","b","c"]
+}
+
+variable "ecsports" {
+  description = "ports required for the game being installed"
+  type = list(
+    object(
+      {
+        type = string
+        from_port = number
+        to_port = number
+        protocol = string
+      }
+    )
+  )
+  default = [
+    {
+      type = "ingress"
+      from_port = "25565"
+      to_port = "25565"
+      protocol = "tcp"
+    }
+  ]
+}
+
 #------------------------------------------------------------------------------
 #Data sources
 #------------------------------------------------------------------------------
@@ -51,8 +78,17 @@ variable "lambda_location" {
 resource "aws_default_vpc" "default_vpc" {
 }
 
+
+resource "aws_default_subnet" "default_az" {
+  availability_zone = "${data.aws_region.current}${var.az_suffix[count.index]}"
+  count = length(var.az_suffix)
+}
+
 #data source for current user information.  Used to get current account id
 data "aws_caller_identity" "current" { 
+}
+
+data "aws_region" "current" {
 }
 
 #data source to obtain route53 hosted zone information
@@ -128,7 +164,7 @@ resource "aws_iam_policy" "route53_rw" {
             "route53:ListResourceRecordSets"
           ]
           Resource = [
-            "${data.aws_route53_zone.to_be_used.arn}"
+            aws_route53_zone.public_hosted_zone.arn
           ]
         }
       ]
@@ -244,6 +280,25 @@ resource "aws_iam_role" "Lambda_role" {
 }
 
 #------------------------------------------------------------------------------
+#VPC
+#------------------------------------------------------------------------------
+#Create Security group to allow ECS in on required ports
+resource aws_security_group "ecs_sg" {
+  name = "allow_gameServer"
+  description = "port(s) for gameserver"
+  vpc_id = aws_default_vpc.default_vpc.id
+}
+
+resource "aws_security_group_rule" "rule" {
+  count = length(var.ecsports)
+  type = var.ecsports[count.index].type
+  from_port = var.ecsports[count.index].from_port
+  to_port = var.ecsports[count.index].to_port
+  protocol = var.ecsports[count.index].protocol
+  security_group_id = aws_security_group.ecs_sg.id
+}
+
+#------------------------------------------------------------------------------
 #Cloudwatch
 #------------------------------------------------------------------------------
 #----- Route53 Query Logging -----
@@ -348,46 +403,135 @@ resource "aws_lambda_function" "turn_on_server" {
   }
 }
 
-# resource "aws_ecs_task_definition" "game_server" {
-#   family = "${game-name}-server"
-#   container_definitions = jsonencode([
-#     {
-#       name      = "${var.game_name}-server"
-#       image     = "itzg/minecraft-server"
-#       cpu       = 1
-#       memory    = 2048
-#       essential = false
-#       portMappings = [
-#         {
-#           protocol = "tcp"
-#           containerPort = 25565
-#           hostPort      = 25565
-#         }
-#       ]
-#     },
-#     {
-#       name      = "second"
-#       image     = "service-second"
-#       cpu       = 10
-#       memory    = 256
-#       essential = true
-#       portMappings = [
-#         {
-#           containerPort = 443
-#           hostPort      = 443
-#         }
-#       ]
-#     }
-#   ])
+#------------------------------------------------------------------------------
+#ECS
+#------------------------------------------------------------------------------
+#----- ECS cluster -----
+resource "aws_ecs_cluster" "ecs_cluster" {
+  name               = "${var.game_name}"
+  capacity_providers = ["FARGATE_SPOT"]
 
-#   volume {
-#     name      = "service-storage"
-#     host_path = "/ecs/service-storage"
-#   }
+  # setting {
+  #   name  = "containerInsights"
+  #   value = "enabled"
+  # }
+}
 
-#   placement_constraints {
-#     type       = "memberOf"
-#     expression = "attribute:ecs.availability-zone in [us-west-2a, us-west-2b]"
-#   }
-# }
+#----- ECS Service -----
+resource "aws_ecs_service" "minecraft_ondemand_service" {
+  name            = "${var.game_name}-server"
+  cluster         = aws_ecs_cluster.ecs_cluster.id
+  task_definition = aws_ecs_task_definition.game_server_and_watchdog.arn
+  desired_count   = 0
+  #   iam_role        = aws_iam_role.minecraft_ondemand_fargate_task_role.arn
+  # depends_on             = [aws_iam_policy.minecraft_ondemand_efs_access_policy]
+  enable_execute_command = true
+
+  capacity_provider_strategy {
+    capacity_provider = "FARGATE_SPOT"
+    weight            = 1
+  }
+
+  network_configuration {
+    subnets          = [aws_default_subnet.default_az[0].id, aws_default_subnet.default_az[1].id, aws_default_subnet.default_az[2].id]
+    security_groups  = [aws_security_group.ecs_sg.id]
+    assign_public_ip = true
+  }
+
+  lifecycle {
+    ignore_changes = [desired_count]
+  }
+}
+
+#----- ECS Task -----
+resource "aws_ecs_task_definition" "game_server_and_watchdog" {
+  family = "${var.game_name}-server"
+
+  requires_compatibilities = [
+    "FARGATE"
+  ]
+  memory = 2048
+  cpu = 1024
+  network_mode = "awsvpc"
+
+  container_definitions = jsonencode(
+    [
+      {
+        name      = "${var.game_name}-server"
+        image     = "itzg/minecraft-server"
+
+        essential = false
+        portMappings = [
+          {
+            protocol = "tcp"
+            containerPort = 25565
+            hostPort      = 25565
+          }
+        ]
+        environment = [
+          {
+            name = "EULA"
+            value = "TRUE"
+          }
+        ]
+        mountpoints = [
+          {
+            sourceVolume = "data"
+            containerPath = "/data"
+          }
+        ]
+      },
+      {
+        name      = "${var.game_name}-ecsfargate-watchdog"
+        image     = "doctorray/minecraft-ecsfargate-watchdog"
+        cpu       = 10
+        memory    = 256
+        essential = true
+        environment = [
+          {
+            name = "CLUSTER"
+            value = "${var.game_name}"
+          },
+          {
+            name = "SERVICE"
+            value = "{$var.game_name}-server"
+          },
+          {
+            name = "DNSZONE"
+            value = aws_route53_zone.public_hosted_zone.id
+          },
+          {
+            name = "SERVERNAME"
+            value = "${var.game_name}.${var.hosted_zone}"
+          },
+          {
+            name = "STARTUPMIN"
+            value = "10"
+          },
+          {
+            name = "SHUTDOWNMIN"
+            value = "20"
+          },
+          {
+            name = "SNSTOPIC"
+            value = aws_sns_topic.server_status_updates.arn
+          }
+        ]
+      }
+    ]
+  )
+
+  volume {
+    name      = "data"
+    efs_volume_configuration {
+      file_system_id = aws_efs_file_system.efsFileSystem.id
+      transit_encryption = "ENABLED"
+      authorization_config {
+        access_point_id = aws_efs_access_point.efsAccessPoint.id
+        iam = "ENABLED"
+      }
+    }
+  }
+}
+
 
