@@ -388,13 +388,22 @@ resource "aws_default_security_group" "default_sg" {
 #------------------------------------------------------------------------------
 #Lambda
 #------------------------------------------------------------------------------
+data "archive_file" "lambda_function" {
+  type = "zip"
+
+  source_file = "${var.lambda_location}"
+  output_path = "../lambda_function.zip"
+}
+
 #Lambda function that turns on the containers
 resource "aws_lambda_function" "turn_on_server" {
-  filename = "${var.lambda_location}"
+  provider = aws.us-east-1
+  filename = "../lambda_function.zip"
   function_name = "${var.game_name}-launcher"
   role = aws_iam_role.Lambda_role.arn
-  source_code_hash = filebase64sha256("${var.lambda_location}")
-  runtime = "python3.8"
+  handler          = "lambda_function.lambda_handler"
+  source_code_hash = filebase64sha256("../lambda_function.zip")
+  runtime          = "python3.9"
 
   environment {
     variables = {
