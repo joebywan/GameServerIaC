@@ -80,7 +80,7 @@ resource "aws_default_vpc" "default_vpc" {
 
 
 resource "aws_default_subnet" "default_az" {
-  availability_zone = "${data.aws_region.current}${var.az_suffix[count.index]}"
+  availability_zone = "${data.aws_region.current.name}${var.az_suffix[count.index]}"
   count = length(var.az_suffix)
 }
 
@@ -204,7 +204,7 @@ data "aws_iam_policy_document" "route53_query_logging_policy" {
     ]
 
     resources = [
-      aws_cloudwatch_log_group.route53_hosted_zone
+      aws_cloudwatch_log_group.route53_hosted_zone.arn
     ]
 
     principals {
@@ -248,9 +248,9 @@ resource "aws_iam_role" "ECS_role" {
   assume_role_policy = data.aws_iam_policy_document.ecs_assume_role_policy.json
   managed_policy_arns = [
       aws_iam_policy.efs_rw.arn,
-      aws_iam_policy.ecs_rw_service,
-      aws_iam_policy.route53_rw,
-      aws_iam_policy.sns_publish
+      aws_iam_policy.ecs_rw_service.arn,
+      aws_iam_policy.route53_rw.arn,
+      aws_iam_policy.sns_publish.arn
     ]
 }
 
@@ -275,7 +275,7 @@ resource "aws_iam_role" "Lambda_role" {
   name = "lambda.${var.game_name}-server"
   assume_role_policy = data.aws_iam_policy_document.lambda_assume_role_policy.json
   managed_policy_arns = [
-      aws_iam_policy.ecs_rw_service
+      aws_iam_policy.ecs_rw_service.arn
     ]
 }
 
@@ -358,7 +358,7 @@ resource "aws_efs_file_system" "efsFileSystem" {
 
 #Access point for EFS
 resource "aws_efs_access_point" "efsAccessPoint" {
-  file_system_id = aws_efs_file_system.efsFileSystem
+  file_system_id = aws_efs_file_system.efsFileSystem.id
   root_directory {
     path = "/${var.game_name}"
     creation_info {
@@ -375,7 +375,7 @@ resource "aws_efs_access_point" "efsAccessPoint" {
 
 #Allow EFS on default security group
 resource "aws_default_security_group" "default_sg" {
-  vpc_id = aws_default_vpc.default_vpc
+  vpc_id = aws_default_vpc.default_vpc.id
   ingress {
       protocol = "tcp"
       self = true
@@ -392,7 +392,7 @@ resource "aws_default_security_group" "default_sg" {
 resource "aws_lambda_function" "turn_on_server" {
   filename = "${var.lambda_location}"
   function_name = "${var.game_name}-launcher"
-  role = aws_iam_role.Lambda_role
+  role = aws_iam_role.Lambda_role.arn
   source_code_hash = filebase64sha256("${var.lambda_location}")
   runtime = "python3.8"
 
@@ -533,5 +533,3 @@ resource "aws_ecs_task_definition" "game_server_and_watchdog" {
     }
   }
 }
-
-
