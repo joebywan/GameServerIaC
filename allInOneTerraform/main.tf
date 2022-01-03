@@ -9,7 +9,15 @@ terraform {
       source = "hashicorp/aws"
       version = "3.70.0"
     }
+    archive = {
+      source = "hashicorp/archive"
+      version = "2.2.0"
+    }
   }
+}
+
+#Archive file provider
+provider "archive" {
 }
 
 #Sets the default provider to use the region specified.
@@ -309,6 +317,15 @@ resource "aws_cloudwatch_log_group" "route53_hosted_zone" {
   name              = "/aws/route53/${var.hosted_zone}"
   retention_in_days = 3
 }
+
+resource "aws_cloudwatch_log_subscription_filter" "route53_query_log_filter" {
+  provider        = aws.us-east-1
+  name            = "${var.game_name}"
+  log_group_name  = aws_cloudwatch_log_group.route53_hosted_zone.name
+  filter_pattern  = "${var.game_name}.${var.hosted_zone}"
+  destination_arn = aws_lambda_function.turn_on_server.arn
+}
+
 #------------------------------------------------------------------------------
 #Route53
 #------------------------------------------------------------------------------
@@ -412,6 +429,15 @@ resource "aws_lambda_function" "turn_on_server" {
   }
 }
 
+#Allows cloudwatch to access the lambda function
+resource "aws_lambda_permission" "allow_cloudwatch" {
+  provider      = aws.us-east-1
+  statement_id  = "AllowExecutionFromCloudWatch"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.turn_on_server.function_name
+  principal     = "logs.us-east-1.amazonaws.com"
+  source_arn    = "${aws_cloudwatch_log_group.route53_hosted_zone.arn}:*"
+}
 #------------------------------------------------------------------------------
 #ECS
 #------------------------------------------------------------------------------
