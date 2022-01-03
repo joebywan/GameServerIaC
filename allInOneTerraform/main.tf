@@ -74,7 +74,7 @@ variable "ecsports" {
         from_port  = number
         to_port    = number
         protocol   = string
-        cidr_block = string
+        cidr_block = list(string)
       }
     )
   )
@@ -84,7 +84,7 @@ variable "ecsports" {
       from_port  = "25565"
       to_port    = "25565"
       protocol   = "tcp"
-      cidr_block = "0.0.0.0/0"
+      cidr_block = ["0.0.0.0/0"]
     }
   ]
 }
@@ -232,6 +232,7 @@ data "aws_iam_policy_document" "route53_query_logging_policy" {
     ]
 
     resources = [
+      "arn:aws:logs:*:*:log-group:/aws/route53/*",
       aws_cloudwatch_log_group.route53_hosted_zone.arn
     ]
 
@@ -337,7 +338,7 @@ resource "aws_security_group_rule" "rule" {
 #----- Route53 Query Logging -----
 #Log group for the route53 query logs to be sent to
 resource "aws_cloudwatch_log_group" "route53_hosted_zone" {
-  provider = aws.us-east-1
+  provider          = aws.us-east-1
   name              = "/aws/route53/${var.hosted_zone}"
   retention_in_days = 3
 }
@@ -441,14 +442,16 @@ resource "aws_default_security_group" "default_sg" {
 #Lambda
 #------------------------------------------------------------------------------
 data "archive_file" "lambda_function" {
-  type = "zip"
-
+  type        = "zip"
   source_file = var.lambda_location
   output_path = "../lambda_function.zip"
 }
 
 #Lambda function that turns on the containers
 resource "aws_lambda_function" "turn_on_server" {
+  depends_on = [
+    data.archive_file.lambda_function
+  ]
   provider         = aws.us-east-1
   filename         = "../lambda_function.zip"
   function_name    = "${var.game_name}-launcher"
@@ -516,8 +519,9 @@ resource "aws_ecs_service" "ecs_service" {
 
 #----- ECS Task -----
 resource "aws_ecs_task_definition" "game_server_and_watchdog" {
-  family = "${var.game_name}-server"
-
+  family             = "${var.game_name}-server"
+  task_role_arn      = aws_iam_role.ECS_role.arn
+  execution_role_arn = aws_iam_role.ECS_role.arn
   requires_compatibilities = [
     "FARGATE"
   ]
