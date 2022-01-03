@@ -22,19 +22,27 @@ provider "archive" {
 
 #Sets the default provider to use the region specified.
 provider "aws" {
-  region = "ap-southeast-2"
+  profile = var.aws_profile
+  region  = "ap-southeast-2"
 }
 
 #Added so we can do the route53 stuff in us-east-1, while doing the rest closest to us
 provider "aws" {
-  region = "us-east-1"
-  alias  = "us-east-1"
+  profile = var.aws_profile
+  region  = "us-east-1"
+  alias   = "us-east-1"
 }
 
 #------------------------------------------------------------------------------
 #Variables
 #------------------------------------------------------------------------------
-
+#Which AWS profile to use?
+variable "aws_profile" {
+  #Which AWS profile to use?  E.g. in the .aws/credentials file each profile is
+  #preceeded by a [profile name] line. If we're using a non-default one, modify
+  #it here.
+  default = "alternate"
+}
 
 variable "hosted_zone" {
   description = "What's the base hosted zone name before the game specific record"
@@ -62,19 +70,21 @@ variable "ecsports" {
   type = list(
     object(
       {
-        type      = string
-        from_port = number
-        to_port   = number
-        protocol  = string
+        type       = string
+        from_port  = number
+        to_port    = number
+        protocol   = string
+        cidr_block = string
       }
     )
   )
   default = [
     {
-      type      = "ingress"
-      from_port = "25565"
-      to_port   = "25565"
-      protocol  = "tcp"
+      type       = "ingress"
+      from_port  = "25565"
+      to_port    = "25565"
+      protocol   = "tcp"
+      cidr_block = "0.0.0.0/0"
     }
   ]
 }
@@ -318,6 +328,7 @@ resource "aws_security_group_rule" "rule" {
   to_port           = var.ecsports[count.index].to_port
   protocol          = var.ecsports[count.index].protocol
   security_group_id = aws_security_group.ecs_sg.id
+  cidr_blocks       = var.ecsports[count.index].cidr_block
 }
 
 #------------------------------------------------------------------------------
@@ -327,7 +338,6 @@ resource "aws_security_group_rule" "rule" {
 #Log group for the route53 query logs to be sent to
 resource "aws_cloudwatch_log_group" "route53_hosted_zone" {
   provider = aws.us-east-1
-
   name              = "/aws/route53/${var.hosted_zone}"
   retention_in_days = 3
 }
@@ -384,10 +394,10 @@ resource "aws_sns_topic" "server_status_updates" {
 
 #SNS subscriptions
 resource "aws_sns_topic_subscription" "sns_subscription" {
-  count    = length(var.sns_subscriptions)
+  count     = length(var.sns_subscriptions)
   topic_arn = aws_sns_topic.server_status_updates.arn
-  protocol = "email"
-  endpoint = var.sns_subscriptions[count.index]
+  protocol  = "email"
+  endpoint  = var.sns_subscriptions[count.index]
 }
 
 #------------------------------------------------------------------------------
