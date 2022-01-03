@@ -6,11 +6,11 @@
 terraform {
   required_providers {
     aws = {
-      source = "hashicorp/aws"
+      source  = "hashicorp/aws"
       version = "3.70.0"
     }
     archive = {
-      source = "hashicorp/archive"
+      source  = "hashicorp/archive"
       version = "2.2.0"
     }
   }
@@ -21,14 +21,14 @@ provider "archive" {
 }
 
 #Sets the default provider to use the region specified.
-provider aws {
-    region = "ap-southeast-2"
+provider "aws" {
+  region = "ap-southeast-2"
 }
 
 #Added so we can do the route53 stuff in us-east-1, while doing the rest closest to us
-provider aws {
-    region = "us-east-1"
-    alias = "us-east-1"
+provider "aws" {
+  region = "us-east-1"
+  alias  = "us-east-1"
 }
 
 #------------------------------------------------------------------------------
@@ -39,22 +39,22 @@ provider aws {
 variable "hosted_zone" {
   description = "What's the base hosted zone name before the game specific record"
   #E.g. if you want to use minecraft.game.knowhowit.com, you need to use game.knowhowit.com here
-  default = "game.knowhowit.com"  
+  default = "game.knowhowit.com"
 }
 
 variable "game_name" {
   description = "What is the game called?"
-  default = "minecraft"
+  default     = "minecraft"
 }
 
 variable "lambda_location" {
   description = "Where's the lambda function file?"
-  default = "./lambda_function.py"
+  default     = "./lambda_function.py"
 }
 
 variable "az_suffix" {
   description = "Provides the availability zone designator"
-  default = ["a","b","c"]
+  default     = ["a", "b", "c"]
 }
 
 variable "ecsports" {
@@ -62,20 +62,27 @@ variable "ecsports" {
   type = list(
     object(
       {
-        type = string
+        type      = string
         from_port = number
-        to_port = number
-        protocol = string
+        to_port   = number
+        protocol  = string
       }
     )
   )
   default = [
     {
-      type = "ingress"
+      type      = "ingress"
       from_port = "25565"
-      to_port = "25565"
-      protocol = "tcp"
+      to_port   = "25565"
+      protocol  = "tcp"
     }
+  ]
+}
+
+variable "sns_subscriptions" {
+  description = "List if email addresses that the sns topic should send to"
+  default = [
+    "fuckspam@knowhowit.com"
   ]
 }
 
@@ -89,11 +96,11 @@ resource "aws_default_vpc" "default_vpc" {
 
 resource "aws_default_subnet" "default_az" {
   availability_zone = "${data.aws_region.current.name}${var.az_suffix[count.index]}"
-  count = length(var.az_suffix)
+  count             = length(var.az_suffix)
 }
 
 #data source for current user information.  Used to get current account id
-data "aws_caller_identity" "current" { 
+data "aws_caller_identity" "current" {
 }
 
 data "aws_region" "current" {
@@ -101,7 +108,10 @@ data "aws_region" "current" {
 
 #data source to obtain route53 hosted zone information
 data "aws_route53_zone" "to_be_used" {
-  name = "${var.hosted_zone}"
+  depends_on = [
+    aws_route53_zone.public_hosted_zone
+  ]
+  name = var.hosted_zone
 }
 
 #------------------------------------------------------------------------------
@@ -110,7 +120,7 @@ data "aws_route53_zone" "to_be_used" {
 #------------------------ IAM POLICIES ----------------------------------------
 #EFS allow read/write
 resource "aws_iam_policy" "efs_rw" {
-  name = "efs.rw.${var.game_name}-data"
+  name        = "efs.rw.${var.game_name}-data"
   description = "Policy to allow read & write for EFS"
 
   policy = jsonencode(
@@ -133,7 +143,7 @@ resource "aws_iam_policy" "efs_rw" {
 
 #ECS admin policy
 resource "aws_iam_policy" "ecs_rw_service" {
-  name = "ecs.rw.${var.game_name}-service"
+  name        = "ecs.rw.${var.game_name}-service"
   description = "Policy to allow administration of ECS"
 
   policy = jsonencode(
@@ -157,7 +167,7 @@ resource "aws_iam_policy" "ecs_rw_service" {
 
 #Route 53 read/write
 resource "aws_iam_policy" "route53_rw" {
-  name = "ecs.rw.${var.game_name}-service"
+  name        = "route53.rw.${var.hosted_zone}"
   description = "Enables read/write of specified Route53 Hosted Zone"
 
   policy = jsonencode(
@@ -182,7 +192,7 @@ resource "aws_iam_policy" "route53_rw" {
 
 #SNS publish
 resource "aws_iam_policy" "sns_publish" {
-  name = "sns.publish.${var.game_name}-notifications"
+  name        = "sns.publish.${var.game_name}-notifications"
   description = "SNS allow publish"
 
   policy = jsonencode(
@@ -216,7 +226,7 @@ data "aws_iam_policy_document" "route53_query_logging_policy" {
     ]
 
     principals {
-      type        = "Service"
+      type = "Service"
       identifiers = [
         "route53.amazonaws.com"
       ]
@@ -252,14 +262,14 @@ data "aws_iam_policy_document" "ecs_assume_role_policy" {
 
 #Then we make the role itself
 resource "aws_iam_role" "ECS_role" {
-  name = "ecs.task.${var.game_name}-server"
+  name               = "ecs.task.${var.game_name}-server"
   assume_role_policy = data.aws_iam_policy_document.ecs_assume_role_policy.json
   managed_policy_arns = [
-      aws_iam_policy.efs_rw.arn,
-      aws_iam_policy.ecs_rw_service.arn,
-      aws_iam_policy.route53_rw.arn,
-      aws_iam_policy.sns_publish.arn
-    ]
+    aws_iam_policy.efs_rw.arn,
+    aws_iam_policy.ecs_rw_service.arn,
+    aws_iam_policy.route53_rw.arn,
+    aws_iam_policy.sns_publish.arn
+  ]
 }
 
 #----- Lambda Role -----
@@ -280,29 +290,33 @@ data "aws_iam_policy_document" "lambda_assume_role_policy" {
 
 #Then we make the role itself
 resource "aws_iam_role" "Lambda_role" {
-  name = "lambda.${var.game_name}-server"
+  name               = "lambda.${var.game_name}-server"
   assume_role_policy = data.aws_iam_policy_document.lambda_assume_role_policy.json
   managed_policy_arns = [
-      aws_iam_policy.ecs_rw_service.arn
-    ]
+    aws_iam_policy.ecs_rw_service.arn
+  ]
 }
 
 #------------------------------------------------------------------------------
 #VPC
 #------------------------------------------------------------------------------
 #Create Security group to allow ECS in on required ports
-resource aws_security_group "ecs_sg" {
-  name = "allow_gameServer"
+resource "aws_security_group" "ecs_sg" {
+  name        = "allow_gameServer"
   description = "port(s) for gameserver"
-  vpc_id = aws_default_vpc.default_vpc.id
+  vpc_id      = aws_default_vpc.default_vpc.id
 }
 
+#Create security group rules
 resource "aws_security_group_rule" "rule" {
-  count = length(var.ecsports)
-  type = var.ecsports[count.index].type
-  from_port = var.ecsports[count.index].from_port
-  to_port = var.ecsports[count.index].to_port
-  protocol = var.ecsports[count.index].protocol
+  depends_on = [
+    aws_security_group.ecs_sg
+  ]
+  count             = length(var.ecsports)
+  type              = var.ecsports[count.index].type
+  from_port         = var.ecsports[count.index].from_port
+  to_port           = var.ecsports[count.index].to_port
+  protocol          = var.ecsports[count.index].protocol
   security_group_id = aws_security_group.ecs_sg.id
 }
 
@@ -320,7 +334,7 @@ resource "aws_cloudwatch_log_group" "route53_hosted_zone" {
 
 resource "aws_cloudwatch_log_subscription_filter" "route53_query_log_filter" {
   provider        = aws.us-east-1
-  name            = "${var.game_name}"
+  name            = var.game_name
   log_group_name  = aws_cloudwatch_log_group.route53_hosted_zone.name
   filter_pattern  = "${var.game_name}.${var.hosted_zone}"
   destination_arn = aws_lambda_function.turn_on_server.arn
@@ -331,7 +345,7 @@ resource "aws_cloudwatch_log_subscription_filter" "route53_query_log_filter" {
 #------------------------------------------------------------------------------
 #Create the hosted zone (makes the NS & SOA records automatically)
 resource "aws_route53_zone" "public_hosted_zone" {
-  name = "${var.hosted_zone}"
+  name = var.hosted_zone
 }
 
 /*
@@ -340,9 +354,9 @@ Create the record that ECS will modify when the game server turns on.
 */
 resource "aws_route53_record" "game_server" {
   zone_id = aws_route53_zone.public_hosted_zone.zone_id
-  name = "${var.game_name}.${var.hosted_zone}"
-  type = "A"
-  ttl = "30"
+  name    = "${var.game_name}.${var.hosted_zone}"
+  type    = "A"
+  ttl     = "30"
   records = [
     "1.1.1.1"
   ]
@@ -353,6 +367,9 @@ Enable query logging to the Cloudwatch log group to provide the data for
 Lambda to trigger
 */
 resource "aws_route53_query_log" "public_hosted_zone" {
+  depends_on = [
+    aws_cloudwatch_log_resource_policy.route53_query_logging_policy
+  ]
   cloudwatch_log_group_arn = aws_cloudwatch_log_group.route53_hosted_zone.arn
   zone_id                  = aws_route53_zone.public_hosted_zone.zone_id
 }
@@ -363,6 +380,14 @@ resource "aws_route53_query_log" "public_hosted_zone" {
 #SNS topic to send server status updates
 resource "aws_sns_topic" "server_status_updates" {
   name = "${var.game_name}-notifications"
+}
+
+#SNS subscriptions
+resource "aws_sns_topic_subscription" "sns_subscription" {
+  count    = length(var.sns_subscriptions)
+  topic_arn = aws_sns_topic.server_status_updates.arn
+  protocol = "email"
+  endpoint = var.sns_subscriptions[count.index]
 }
 
 #------------------------------------------------------------------------------
@@ -379,9 +404,9 @@ resource "aws_efs_access_point" "efsAccessPoint" {
   root_directory {
     path = "/${var.game_name}"
     creation_info {
-        owner_gid = "1000"
-        owner_uid = "1000"
-        permissions = "0755"
+      owner_gid   = "1000"
+      owner_uid   = "1000"
+      permissions = "0755"
     }
   }
   posix_user {
@@ -394,11 +419,11 @@ resource "aws_efs_access_point" "efsAccessPoint" {
 resource "aws_default_security_group" "default_sg" {
   vpc_id = aws_default_vpc.default_vpc.id
   ingress {
-      protocol = "tcp"
-      self = true
-      from_port = 2049
-      to_port = 2049
-      cidr_blocks = [aws_default_vpc.default_vpc.cidr_block]
+    protocol    = "tcp"
+    self        = true
+    from_port   = 2049
+    to_port     = 2049
+    cidr_blocks = [aws_default_vpc.default_vpc.cidr_block]
   }
 }
 
@@ -408,16 +433,16 @@ resource "aws_default_security_group" "default_sg" {
 data "archive_file" "lambda_function" {
   type = "zip"
 
-  source_file = "${var.lambda_location}"
+  source_file = var.lambda_location
   output_path = "../lambda_function.zip"
 }
 
 #Lambda function that turns on the containers
 resource "aws_lambda_function" "turn_on_server" {
-  provider = aws.us-east-1
-  filename = "../lambda_function.zip"
-  function_name = "${var.game_name}-launcher"
-  role = aws_iam_role.Lambda_role.arn
+  provider         = aws.us-east-1
+  filename         = "../lambda_function.zip"
+  function_name    = "${var.game_name}-launcher"
+  role             = aws_iam_role.Lambda_role.arn
   handler          = "lambda_function.lambda_handler"
   source_code_hash = filebase64sha256("../lambda_function.zip")
   runtime          = "python3.9"
@@ -443,7 +468,7 @@ resource "aws_lambda_permission" "allow_cloudwatch" {
 #------------------------------------------------------------------------------
 #----- ECS cluster -----
 resource "aws_ecs_cluster" "ecs_cluster" {
-  name               = "${var.game_name}"
+  name               = var.game_name
   capacity_providers = ["FARGATE_SPOT"]
 
   # setting {
@@ -453,13 +478,14 @@ resource "aws_ecs_cluster" "ecs_cluster" {
 }
 
 #----- ECS Service -----
-resource "aws_ecs_service" "minecraft_ondemand_service" {
-  name            = "${var.game_name}-server"
-  cluster         = aws_ecs_cluster.ecs_cluster.id
-  task_definition = aws_ecs_task_definition.game_server_and_watchdog.arn
-  desired_count   = 0
-  #   iam_role        = aws_iam_role.minecraft_ondemand_fargate_task_role.arn
-  # depends_on             = [aws_iam_policy.minecraft_ondemand_efs_access_policy]
+resource "aws_ecs_service" "ecs_service" {
+  depends_on = [
+    aws_iam_policy.efs_rw
+  ]
+  name                   = "${var.game_name}-server"
+  cluster                = aws_ecs_cluster.ecs_cluster.id
+  task_definition        = aws_ecs_task_definition.game_server_and_watchdog.arn
+  desired_count          = 0
   enable_execute_command = true
 
   capacity_provider_strategy {
@@ -485,33 +511,33 @@ resource "aws_ecs_task_definition" "game_server_and_watchdog" {
   requires_compatibilities = [
     "FARGATE"
   ]
-  memory = 2048
-  cpu = 1024
+  memory       = 2048
+  cpu          = 1024
   network_mode = "awsvpc"
 
   container_definitions = jsonencode(
     [
       {
-        name      = "${var.game_name}-server"
-        image     = "itzg/minecraft-server"
+        name  = "${var.game_name}-server"
+        image = "itzg/minecraft-server"
 
         essential = false
         portMappings = [
           {
-            protocol = "tcp"
+            protocol      = "tcp"
             containerPort = 25565
             hostPort      = 25565
           }
         ]
         environment = [
           {
-            name = "EULA"
+            name  = "EULA"
             value = "TRUE"
           }
         ]
         mountpoints = [
           {
-            sourceVolume = "data"
+            sourceVolume  = "data"
             containerPath = "/data"
           }
         ]
@@ -524,31 +550,31 @@ resource "aws_ecs_task_definition" "game_server_and_watchdog" {
         essential = true
         environment = [
           {
-            name = "CLUSTER"
+            name  = "CLUSTER"
             value = "${var.game_name}"
           },
           {
-            name = "SERVICE"
+            name  = "SERVICE"
             value = "{$var.game_name}-server"
           },
           {
-            name = "DNSZONE"
+            name  = "DNSZONE"
             value = aws_route53_zone.public_hosted_zone.id
           },
           {
-            name = "SERVERNAME"
+            name  = "SERVERNAME"
             value = "${var.game_name}.${var.hosted_zone}"
           },
           {
-            name = "STARTUPMIN"
+            name  = "STARTUPMIN"
             value = "10"
           },
           {
-            name = "SHUTDOWNMIN"
+            name  = "SHUTDOWNMIN"
             value = "20"
           },
           {
-            name = "SNSTOPIC"
+            name  = "SNSTOPIC"
             value = aws_sns_topic.server_status_updates.arn
           }
         ]
@@ -557,13 +583,13 @@ resource "aws_ecs_task_definition" "game_server_and_watchdog" {
   )
 
   volume {
-    name      = "data"
+    name = "data"
     efs_volume_configuration {
-      file_system_id = aws_efs_file_system.efsFileSystem.id
+      file_system_id     = aws_efs_file_system.efsFileSystem.id
       transit_encryption = "ENABLED"
       authorization_config {
         access_point_id = aws_efs_access_point.efsAccessPoint.id
-        iam = "ENABLED"
+        iam             = "ENABLED"
       }
     }
   }
