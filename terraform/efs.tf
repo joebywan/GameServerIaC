@@ -8,10 +8,10 @@ resource "aws_efs_file_system" "efsFileSystem" {
 
 # Exposes the EFS to each subnet in the VPC.  Makes sure there's 1 per AZ
 resource "aws_efs_mount_target" "mount_target" {
-  count = length(tolist(data.aws_subnet_ids.defaultVPCSubnetIds.ids))
-  file_system_id = aws_efs_file_system.efsFileSystem
-  subnet_id = tolist(data.aws_subnet_ids.defaultVPCSubnetIds.ids)[count.index]
-  security_groups = [aws.aws_security_group.efs_sg.id]
+  count           = length(tolist(data.aws_subnet_ids.defaultVPCSubnetIds.ids))
+  file_system_id  = aws_efs_file_system.efsFileSystem.id
+  subnet_id       = tolist(data.aws_subnet_ids.defaultVPCSubnetIds.ids)[count.index]
+  security_groups = [aws_security_group.efs_sg.id]
 }
 
 #Access point for EFS

@@ -10,9 +10,9 @@ resource "aws_security_group" "ecs_sg" {
 
 #Create security group to allow NFS ports for EFS
 resource "aws_security_group" "efs_sg" {
-  name = "allow_nfs_ports"
+  name        = "allow_nfs_ports"
   description = "Allow NFS ports through so EFS can be accessed"
-  vpc_id = aws_default_vpc.default_vpc.vpc_id
+  vpc_id      = aws_default_vpc.default_vpc.id
 }
 
 #Create security group rules
