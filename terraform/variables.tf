@@ -9,6 +9,11 @@ variable "aws_profile" {
   default = "alternate"
 }
 
+variable "server_region" {
+  #Region the gameserver's to be deployed in
+  default = "ap-southeast-2"
+}
+
 variable "hosted_zone" {
   description = "What's the base hosted zone name before the game specific record"
   #E.g. if you want to use minecraft.game.knowhowit.com, you need to use game.knowhowit.com here

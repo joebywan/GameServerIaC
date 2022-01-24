@@ -1,7 +1,7 @@
 import boto3, os
 
-REGION = os.environ.get['AWS_REGION']
-CLUSTER = os.environ.get['game_name']
+REGION = os.environ.get('region')
+CLUSTER = os.environ.get('game_name')
 SERVICE = CLUSTER + "-server"
 
 

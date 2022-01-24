@@ -18,7 +18,12 @@ resource "aws_iam_policy" "efs_rw" {
             "elasticfilesystem:ClientWrite",
             "elasticfilesystem:DescribeFileSystems"
           ]
-          Resource = "arn:aws:elasticfilesystem:us-west-2:${data.aws_caller_identity.current.account_id}:file-system/${aws_efs_file_system.efsFileSystem.id}"
+          Resource = "arn:aws:elasticfilesystem:${var.server_region}:${data.aws_caller_identity.current.account_id}:file-system/${aws_efs_file_system.efsFileSystem.id}"
+          "Condition": {
+            "StringEquals": {
+              "elasticfilesystem:AccessPointArn": "arn:aws:elasticfilesystem:${var.server_region}:${data.aws_caller_identity.current.account_id}:access-point/${aws_efs_access_point.efsAccessPoint.id}"
+            }
+          }
         }
       ]
     }
@@ -40,8 +45,17 @@ resource "aws_iam_policy" "ecs_rw_service" {
             "ecs:*"
           ]
           Resource = [
-            "arn:aws:ecs:us-west-2:${data.aws_caller_identity.current.account_id}:service/${var.game_name}/${var.game_name}-server",
-            "arn:aws:ecs:us-west-2:${data.aws_caller_identity.current.account_id}:task/${var.game_name}/*"
+            "arn:aws:ecs:${var.server_region}:${data.aws_caller_identity.current.account_id}:service/${var.game_name}/${var.game_name}-server",
+            "arn:aws:ecs:${var.server_region}:${data.aws_caller_identity.current.account_id}:task/${var.game_name}/*"
+          ]
+        },
+        {
+          Effect = "Allow"
+          Action = [
+            "ec2:DescribeNetworkInterfaces"
+          ]
+          Resource = [
+            "*"
           ]
         }
       ]
@@ -68,6 +82,13 @@ resource "aws_iam_policy" "route53_rw" {
           Resource = [
             aws_route53_zone.public_hosted_zone.arn
           ]
+        },
+        {
+          Effect = "Allow"
+          Action = [
+            "Route53:ListHostedZones"
+          ]
+          Resource = "*"
         }
       ]
     }

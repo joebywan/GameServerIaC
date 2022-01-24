@@ -22,6 +22,7 @@ resource "aws_ecs_service" "ecs_service" {
   task_definition        = aws_ecs_task_definition.game_server_and_watchdog.arn
   desired_count          = 0
   enable_execute_command = true
+  #launch_type = "FARGATE"
 
   capacity_provider_strategy {
     capacity_provider = "FARGATE_SPOT"
@@ -87,11 +88,11 @@ resource "aws_ecs_task_definition" "game_server_and_watchdog" {
         environment = [
           {
             name  = "CLUSTER"
-            value = "${var.game_name}"
+            value = "${aws_ecs_cluster.ecs_cluster.name}"
           },
           {
             name  = "SERVICE"
-            value = "{$var.game_name}-server"
+            value = "${var.game_name}-server"
           },
           {
             name  = "DNSZONE"

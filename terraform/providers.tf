@@ -23,7 +23,7 @@ provider "archive" {
 #Sets the default provider to use the region specified.
 provider "aws" {
   profile = var.aws_profile
-  region  = "ap-southeast-2"
+  region  = var.server_region
 }
 
 #Added so we can do the route53 stuff in us-east-1, while doing the rest closest to us
