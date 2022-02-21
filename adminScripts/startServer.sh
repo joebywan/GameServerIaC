@@ -1,6 +1,6 @@
 #!/bin/bash
 CLUSTER="minecraft"
-SERVICE="ark-server"
+SERVICE="valheim-server"
 #TASK_DEFINITION="ark-server"
 #REVISION="1"
 DESIRED_COUNT=0
