@@ -9,4 +9,5 @@ DESIRED_COUNT=0
 if [ ! -z "$1" ]; then DESIRED_COUNT=$1; fi
 
 #Command to be executed, modifies the desired count (aka start the container)
-aws ecs update-service --cluster $CLUSTER --service $SERVICE --desired-count $DESIRED_COUNT
+CURRENT_COUNT=$(aws ecs update-service --cluster $CLUSTER --service $SERVICE --desired-count $DESIRED_COUNT --query "service.desiredCount")
+echo "Set current desiredCount to: $CURRENT_COUNT"
