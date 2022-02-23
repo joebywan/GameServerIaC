@@ -12,7 +12,7 @@ SERVICE="valheim-server"
 # ---- END NOTE ----
 
 TASKID=$(aws ecs list-tasks --cluster $CLUSTER --service-name $SERVICE --query "taskArns[0]" --output text)
-ENIID=$(aws ecs describe-tasks --cluster $CLUSTER --tasks $TASKID --query "tasks[0].attachments[0].details[?name=='networkInterfaceId'].value | [0]" --output text)
+ENIID=$(aws ecs describe-tasks --cluster $CLUSTER --tasks $TASKID --query "tasks[0].attachments[0].details[?name=='networkInterfaceId'].value" --output text)
 PUBLICIP=$(aws ec2 describe-network-interfaces --network-interface-ids $ENIID --query 'NetworkInterfaces[0].Association.PublicIp' --output text)
 
 echo $PUBLICIP
