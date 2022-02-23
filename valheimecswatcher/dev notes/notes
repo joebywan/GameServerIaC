@@ -1,0 +1,12 @@
+Commands to install gamedig
+#Install Node.js
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.34.0/install.sh | bash
+. ~/.nvm/nvm.sh
+nvm install node
+npm install gamedig -g
+
+gamdig output
+{"name":"My Server","map":"My Server","password":true,"raw":{"protocol":17,"folder":"valheim","game":"","appId":892970,"numplayers":0,"numbots":0,"listentype":"d","environment":"l","secure":0,"version":"1.0.0.0","steamid":"90156483945497603","tags":["0.206.5"]},"maxplayers":64,"players":[],"bots":[],"connect":"13.236.183.43:2456","ping":17}
+
+docker tag local-image:tagname new-repo:tagname
+docker push new-repo:tagname
