@@ -1,0 +1,14 @@
+{
+	"Comment": "Fargate Public IP change for valheim-server",
+	"Changes": [{
+		"Action": "UPSERT",
+		"ResourceRecordSet": {
+			"Name": "valheim.ecs.knowhowit.com",
+			"Type": "A",
+			"TTL": 30,
+			"ResourceRecords": [{
+				"Value": "3.25.180.208"
+			}]
+		}
+	}]
+}
