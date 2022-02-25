@@ -16,3 +16,5 @@ ENIID=$(aws ecs describe-tasks --cluster $CLUSTER --tasks $TASKID --query "tasks
 PUBLICIP=$(aws ec2 describe-network-interfaces --network-interface-ids $ENIID --query 'NetworkInterfaces[0].Association.PublicIp' --output text)
 
 echo $PUBLICIP
+QUERYPORT=2457
+gamedig --type valheim 54.252.205.183 2457
