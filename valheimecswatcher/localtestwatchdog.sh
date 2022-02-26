@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# Hardcoded variables to run locally.  These will be provided via env when it moves to fargate.
 CLUSTER="minecraft"
 SERVICE="valheim-server"
 SERVERNAME="valheim.ecs.knowhowit.com"
@@ -9,6 +10,7 @@ SHUTDOWNMIN=20
 QUERYPORT=2457
 SNSTOPIC="arn:aws:sns:ap-southeast-2:746627761656:minecraft-notifications"
 
+# Check if the required environment variables have been provided & if not, exit or set defaults as required
 [ -n "$CLUSTER" ] || { echo "CLUSTER env variable must be set to the name of the ECS cluster" ; exit 1; }
 [ -n "$SERVICE" ] || { echo "SERVICE env variable must be set to the name of the service in the $CLUSTER cluster" ; exit 1; }
 [ -n "$SERVERNAME" ] || { echo "SERVERNAME env variable must be set to the full A record in Route53 we are updating" ; exit 1; }
@@ -51,10 +53,10 @@ trap sigterm SIGTERM
 TASKID=None
 while [[ $TASKID == None ]]
 do
-  TASKID=$(aws ecs list-tasks --cluster $CLUSTER --service-name $SERVICE --query "taskArns[0]" --output text)
+  # TASK=$(curl -s ${ECS_CONTAINER_METADATA_URI_V4}/task | jq -r '.TaskARN' | awk -F/ '{ print $NF }') # Use for ECS version
+  TASKID=$(aws ecs list-tasks --cluster $CLUSTER --service-name $SERVICE --query "taskArns[0]" --output text) # Used while testing from local machine
   echo "I believe our task id is ->$TASKID<-"
 done
-
 
 ## get eni from from ECS
 ENI=""
@@ -75,7 +77,7 @@ done
 ## update public dns record
 echo "Updating DNS record for $SERVERNAME to $PUBLICIP"
 ## prepare json file
-rm $SERVICE-dns.json
+rm $SERVICE-dns.json # Have to clear it, was piling up otherwise
 cat << EOF >> $SERVICE-dns.json
 {
 	"Comment": "Fargate Public IP change for $SERVICE",
@@ -92,42 +94,52 @@ cat << EOF >> $SERVICE-dns.json
 	}]
 }
 EOF
+# Do the update using the generated json policy
 CAPTUREOUTPUT=$(aws route53 change-resource-record-sets --hosted-zone-id $DNSZONE --change-batch file://$SERVICE-dns.json)
 echo "DNS record for $SERVERNAME updated to $PUBLICIP"
 
 
-#Check that server is up
+# Check that server is up
 COUNTER=0
 while true
 do
-  CAPTUREOUTPUT=$(gamedig --type valheim "$PUBLICIP" $QUERYPORT)
-  if [[ $CAPTUREOUTPUT == *"ping"* ]]; then break; else sleep 1; fi
+  # Query the server
+  CAPTUREOUTPUT=$(gamedig --type valheim "$PUBLICIP" "$QUERYPORT")
+  # If it's got the right output, drop the loop, otherwise wait
+  if [[ "$CAPTUREOUTPUT" == *"ping"* ]]; then break; else sleep 1; fi
+  # Increment the shutdown counter.
   COUNTER=$((COUNTER + 1))
-  if [ $COUNTER -gt $((60 * STARTUPMIN)) ]; then echo "10mins have passed without starting, terminating."; zero_service; fi
+  # If the server isn't detected as up in $STARTUPMIN minutes, shut it down
+  if [ "$COUNTER" -gt $((60 * STARTUPMIN)) ]; then echo "10mins have passed without starting, terminating."; zero_service; fi
 done
 echo "Detected server, switching to shutdown watcher."
 
 ## Send startup notification message
 send_notification startup 
 
+# Monitor the server for players, if none, shutdown in SHUTDOWNMIN minutes
 COUNTER=0
 while [ $COUNTER -le $SHUTDOWNMIN ]
 do
   # Query the server and store the output
-  SERVERQUERY=$(gamedig --type valheim "$PUBLICIP" $QUERYPORT)
-  FILTER=${SERVERQUERY#*'"numplayers":'}
+  CAPTUREOUTPUT=$(gamedig --type valheim "$PUBLICIP" $QUERYPORT)
+  # Strip the output down to player count
+  FILTER=${CAPTUREOUTPUT#*'"numplayers":'}
   PLAYERCOUNT=$(cut -d',' -f-1 <<< "$FILTER")
-  if [ "$PLAYERCOUNT" -lt 1 ] || [ "$SERVERQUERY" == '{"error":"Failed all 1 attempts"}' ]
+
+  # Test the player count, if it's 0 or if the server wasn't contactable & 
+  # given an error, increment the shutdown timer
+  if [ "$PLAYERCOUNT" -lt 1 ] || [ "$CAPTUREOUTPUT" == '{"error":"Failed all 1 attempts"}' ]
   then
     echo "$PLAYERCOUNT players connected, $COUNTER out of $SHUTDOWNMIN minutes"
     COUNTER=$((COUNTER +1))
   else
-    "$PLAYERCOUNT players connected, counter at zero"
+    echo "$PLAYERCOUNT players connected, counter at zero"
     COUNTER=0
   fi
   sleep 1m
-  echo $COUNTER
 done
 
+# No players or not contactable for long enough, kill it
 echo "$SHUTDOWNMIN minutes elapsed without a connection, terminating."
 zero_service

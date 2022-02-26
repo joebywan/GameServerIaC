@@ -23,7 +23,7 @@ function zero_service ()
 {
   send_notification shutdown
   echo Setting desired task count to zero.
-  aws ecs update-service --cluster $CLUSTER --service $SERVICE --desired-count 0
+  aws ecs update-service --cluster "$CLUSTER" --service "$SERVICE" --desired-count 0
   exit 0
 }
 
@@ -36,21 +36,21 @@ function sigterm ()
 trap sigterm SIGTERM
 
 ## get task id from the Fargate metadata
-TASK=$(curl -s ${ECS_CONTAINER_METADATA_URI_V4}/task | jq -r '.TaskARN' | awk -F/ '{ print $NF }')
+TASK=$(curl -s "${ECS_CONTAINER_METADATA_URI_V4}"/task | jq -r '.TaskARN' | awk -F/ '{ print $NF }')
 echo "I believe our task id is $TASK"
 
 ## get eni from from ECS
-ENI=$(aws ecs describe-tasks --cluster $CLUSTER --tasks $TASK --query "tasks[0].attachments[0].details[?name=='networkInterfaceId'].value" --output text)
+ENI=$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASK" --query "tasks[0].attachments[0].details[?name=='networkInterfaceId'].value" --output text)
 echo "I believe our eni is $ENI"
 
 ## get public ip address from EC2
-PUBLICIP=$(aws ec2 describe-network-interfaces --network-interface-ids $ENI --query 'NetworkInterfaces[0].Association.PublicIp' --output text)
+PUBLICIP=$(aws ec2 describe-network-interfaces --network-interface-ids "$ENI" --query 'NetworkInterfaces[0].Association.PublicIp' --output text)
 echo "I believe our public IP address is $PUBLICIP"
 
 ## update public dns record
 echo "Updating DNS record for $SERVERNAME to $PUBLICIP"
 ## prepare json file
-cat << EOF >> $SERVICE-dns.json
+cat << EOF >> "$SERVICE"-dns.json
 {
   "Comment": "Fargate Public IP change for $SERVICE",
   "Changes": [
@@ -70,37 +70,37 @@ cat << EOF >> $SERVICE-dns.json
   ]
 }
 EOF
-aws route53 change-resource-record-sets --hosted-zone-id $DNSZONE --change-batch file://$SERVICE-dns.json
+aws route53 change-resource-record-sets --hosted-zone-id "$DNSZONE" --change-batch file://"$SERVICE"-dns.json
 echo "DNS record for $SERVERNAME updated to $PUBLICIP"
 
 #Check that server is up
-COUNTER = 0
+COUNTER=0
 while true
 do
-  [[ $(gamedig --type valheim 127.0.0.1 $QUERYPORT) == *"ping"* ]] && break || sleep 1
-  COUNTER = $(($COUNTER + 1))
-  [ $COUNTER -gt 600 ] && echo "10mins have passed without starting, terminating".; zero_service
+  CAPTUREOUTPUT=$(gamedig --type valheim 127.0.0.1 "$QUERYPORT")
+  if [[ $CAPTUREOUTPUT == *"ping"* ]]; then break; else sleep 1; fi
+  COUNTER=$((COUNTER+1))
+  if [ "$COUNTER" -gt $((60 * STARTUPMIN)) ]; then echo "10mins have passed without starting, terminating."; zero_service; fi
 done
 echo "Detected server, switching to shutdown watcher."
 
 ## Send startup notification message
 send_notification startup 
 
-COUNTER = 0
-while [ $COUNTER -le $SHUTDOWNMIN ]
+# Server's up, now are players staying connected?
+COUNTER=0
+while [ "$COUNTER" -le $SHUTDOWNMIN ]
 do
-  #String to search the query for
-  SUBSTRING='"numplayers":'
-  # Query the server and store the output
-  SERVERQUERY=$(gamedig --type valheim 127.0.0.1 $QUERYPORT)
-  FILTER=${SERVERQUERY#*SUBSTRING}
-  PLAYERCOUNT=$(cut -d',' -f-1 <<< $FILTER)
-  if [$PLAYERCOUNT -lt 1]
+  # Query the server, capture the output
+  CAPTUREOUTPUT=$(gamedig --type valheim 127.0.0.1 "$QUERYPORT")
+  FILTER=${CAPTUREOUTPUT#*'"numplayers":'}
+  PLAYERCOUNT=$(cut -d',' -f-1 <<< "$FILTER")
+  if [ "$PLAYERCOUNT" -lt 1 ] || [ "$CAPTUREOUTPUT" == '{"error":"Failed all 1 attempts"}' ]
   then
     echo "$PLAYERCOUNT players connected, $COUNTER out of $SHUTDOWNMIN minutes"
-    COUNTER=$(($COUNTER +1))
+    COUNTER=$((COUNTER+1))
   else
-    "$PLAYERCOUNT players connected, counter at zero"
+    echo "$PLAYERCOUNT players connected, counter at zero"
     COUNTER=0
   fi
   sleep 1m
