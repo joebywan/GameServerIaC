@@ -36,16 +36,28 @@ function sigterm ()
 trap sigterm SIGTERM
 
 ## get task id from the Fargate metadata
-TASK=$(curl -s "${ECS_CONTAINER_METADATA_URI_V4}"/task | jq -r '.TaskARN' | awk -F/ '{ print $NF }')
-echo "I believe our task id is $TASK"
+TASKID=None
+while [[ $TASKID == None ]]
+do
+  TASKID=$(curl -s "${ECS_CONTAINER_METADATA_URI_V4}"/task | jq -r '.TaskARN' | awk -F/ '{ print $NF }')
+  echo "I believe our task id is $TASKID"
+done
 
 ## get eni from from ECS
-ENI=$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASK" --query "tasks[0].attachments[0].details[?name=='networkInterfaceId'].value" --output text)
-echo "I believe our eni is $ENI"
+ENI=""
+while [[ $ENI == "" ]]
+do
+  ENI=$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASKID" --query "tasks[0].attachments[0].details[?name=='networkInterfaceId'].value" --output text)
+  echo "I believe our eni is $ENI"
+done
 
 ## get public ip address from EC2
-PUBLICIP=$(aws ec2 describe-network-interfaces --network-interface-ids "$ENI" --query 'NetworkInterfaces[0].Association.PublicIp' --output text)
-echo "I believe our public IP address is $PUBLICIP"
+PUBLICIP=None
+while [[ $PUBLICIP == None ]]
+do 
+  PUBLICIP=$(aws ec2 describe-network-interfaces --network-interface-ids "$ENI" --query 'NetworkInterfaces[0].Association.PublicIp' --output text)
+  echo "I believe our public IP address is $PUBLICIP"
+done
 
 ## update public dns record
 echo "Updating DNS record for $SERVERNAME to $PUBLICIP"
@@ -70,7 +82,7 @@ cat << EOF >> "$SERVICE"-dns.json
   ]
 }
 EOF
-aws route53 change-resource-record-sets --hosted-zone-id "$DNSZONE" --change-batch file://"$SERVICE"-dns.json
+CAPTUREOUTPUT=$(aws route53 change-resource-record-sets --hosted-zone-id "$DNSZONE" --change-batch file://"$SERVICE"-dns.json)
 echo "DNS record for $SERVERNAME updated to $PUBLICIP"
 
 #Check that server is up
@@ -95,7 +107,7 @@ do
   CAPTUREOUTPUT=$(gamedig --type valheim 127.0.0.1 "$QUERYPORT")
   FILTER=${CAPTUREOUTPUT#*'"numplayers":'}
   PLAYERCOUNT=$(cut -d',' -f-1 <<< "$FILTER")
-  if [ "$PLAYERCOUNT" -lt 1 ] || [ "$CAPTUREOUTPUT" == '{"error":"Failed all 1 attempts"}' ]
+  if [ "$PLAYERCOUNT" -lt 1 ] || [ "$CAPTUREOUTPUT" == '{"error":"Failed all '*' attempts"}' ]
   then
     echo "$PLAYERCOUNT players connected, $COUNTER out of $SHUTDOWNMIN minutes"
     COUNTER=$((COUNTER+1))
