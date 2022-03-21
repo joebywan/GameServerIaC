@@ -1,18 +1,48 @@
 #------------------------------------------------------------------------------
 #VPC
 #------------------------------------------------------------------------------
+resource "aws_vpc" "vpc" {
+  cidr_block = local.vpc_cidr
+  tags = {
+    Name = "${var.game_name}_vpc"
+  }
+}
+
+resource "aws_internet_gateway" "igw" {
+  vpc_id = aws_vpc.vpc.id
+  tags = {
+    Name = "${var.game_name}_igw"
+  }
+}
+
+resource "aws_route" "igwRouteEntry" {
+  route_table_id         = aws_vpc.vpc.main_route_table_id
+  destination_cidr_block = "0.0.0.0/0"
+  gateway_id             = aws_internet_gateway.igw.id
+}
+
+resource "aws_subnet" "subnet" {
+  count             = length(local.availability_zones)
+  vpc_id            = aws_vpc.vpc.id
+  cidr_block        = local.subnet_cidrs[count.index]
+  availability_zone = local.availability_zones[count.index]
+  tags = {
+    Name = "${var.game_name}_subnet"
+  }
+}
+
 #Create Security group to allow ECS in on required ports
 resource "aws_security_group" "ecs_sg" {
   name        = "allow_ecs_gameServer"
   description = "port(s) for gameserver"
-  vpc_id      = aws_default_vpc.default_vpc.id
+  vpc_id      = aws_vpc.vpc.id
 }
 
 #Create security group to allow NFS ports for EFS
 resource "aws_security_group" "efs_sg" {
   name        = "allow_nfs_ports"
   description = "Allow NFS ports through so EFS can be accessed"
-  vpc_id      = aws_default_vpc.default_vpc.id
+  vpc_id      = aws_vpc.vpc.id
 }
 
 #Create security group rules

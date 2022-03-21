@@ -23,7 +23,7 @@ resource "aws_lambda_function" "turn_on_server" {
   environment {
     variables = {
       game_name = var.game_name
-      region = var.server_region
+      region    = var.server_region
     }
   }
 }

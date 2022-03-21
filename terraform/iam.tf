@@ -19,9 +19,9 @@ resource "aws_iam_policy" "efs_rw" {
             "elasticfilesystem:DescribeFileSystems"
           ]
           Resource = "arn:aws:elasticfilesystem:${var.server_region}:${data.aws_caller_identity.current.account_id}:file-system/${aws_efs_file_system.efsFileSystem.id}"
-          "Condition": {
-            "StringEquals": {
-              "elasticfilesystem:AccessPointArn": "arn:aws:elasticfilesystem:${var.server_region}:${data.aws_caller_identity.current.account_id}:access-point/${aws_efs_access_point.efsAccessPoint.id}"
+          "Condition" : {
+            "StringEquals" : {
+              "elasticfilesystem:AccessPointArn" : "arn:aws:elasticfilesystem:${var.server_region}:${data.aws_caller_identity.current.account_id}:access-point/${aws_efs_access_point.efsAccessPoint.id}"
             }
           }
         }

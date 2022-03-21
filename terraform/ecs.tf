@@ -30,7 +30,7 @@ resource "aws_ecs_service" "ecs_service" {
   }
 
   network_configuration {
-    subnets          = [aws_default_subnet.default_az[0].id, aws_default_subnet.default_az[1].id, aws_default_subnet.default_az[2].id]
+    subnets          = tolist(aws_subnet.subnet[*].id)
     security_groups  = [aws_security_group.ecs_sg.id]
     assign_public_ip = true
   }

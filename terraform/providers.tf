@@ -24,6 +24,9 @@ provider "archive" {
 provider "aws" {
   profile = var.aws_profile
   region  = var.server_region
+  # assume_role {
+  #   role_arn = "arn:aws:iam::942434513370:role/adminrole"
+  # }
 }
 
 #Added so we can do the route53 stuff in us-east-1, while doing the rest closest to us
@@ -31,4 +34,7 @@ provider "aws" {
   profile = var.aws_profile
   region  = "us-east-1"
   alias   = "us-east-1"
+  # assume_role {
+  #   role_arn = "arn:aws:iam::942434513370:role/adminrole"
+  # }
 }
