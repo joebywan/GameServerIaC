@@ -8,11 +8,19 @@ terraform {
     aws = {
       source  = "hashicorp/aws"
       version = "3.70.0"
+      alias = "test"
     }
+    aws = {
+      source  = "hashicorp/aws"
+      version = "3.70.0"
+      alias = "test2"
+    }
+
     archive = {
       source  = "hashicorp/archive"
       version = "2.2.0"
     }
+    
   }
 }
 
@@ -24,6 +32,10 @@ provider "archive" {
 provider "aws" {
   profile = var.aws_profile
   region  = var.server_region
+  assume_role {
+    role_arn     = "arn:aws:iam::${var.aws_account}:role/${var.itoc_role}"
+    session_name = "itoc-temp-sts-role"
+  }
   # assume_role {
   #   role_arn = "arn:aws:iam::942434513370:role/adminrole"
   # }
@@ -34,7 +46,20 @@ provider "aws" {
   profile = var.aws_profile
   region  = "us-east-1"
   alias   = "us-east-1"
+  assume_role {
+    role_arn     = "arn:aws:iam::${var.aws_account}:role/${var.itoc_role}"
+    session_name = "itoc-temp-sts-role"
+  }
   # assume_role {
   #   role_arn = "arn:aws:iam::942434513370:role/adminrole"
   # }
 }
+
+# provider "aws" {
+#   region  = "ap-southeast-2"
+#   profile = "default"
+#   assume_role {
+#     role_arn     = "arn:aws:iam::${var.aws_account}:role/${var.itoc_role}"
+#     session_name = "itoc-temp-sts-role"
+#   }
+# }

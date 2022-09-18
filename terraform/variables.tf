@@ -14,7 +14,7 @@ variable "aws_profile" {
   #Which AWS profile to use?  E.g. in the .aws/credentials file each profile is
   #preceeded by a [profile name] line. If we're using a non-default one, modify
   #it here.
-  default = "alternate"
+  default = "default"
 }
 
 variable "server_region" {
@@ -85,6 +85,13 @@ variable "ecsports" {
       to_port    = "25565"
       protocol   = "tcp"
       cidr_block = ["0.0.0.0/0"]
+    },
+    {
+      type       = "egress"
+      from_port  = "0"
+      to_port    = "0"
+      protocol   = "-1"
+      cidr_block = ["0.0.0.0/0"]
     }
   ]
 }
@@ -94,4 +101,16 @@ variable "sns_subscriptions" {
   default = [
     "fuckspam@knowhowit.com"
   ]
+}
+
+variable "itoc_role" {
+  description = "role arn for assume role"
+  type        = string
+  default     = "ItocAdmin"
+}
+
+variable "aws_account" {
+  description = "aws account number to assume into"
+  type        = string
+  default     = "665628331607"
 }
