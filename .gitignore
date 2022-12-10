@@ -39,3 +39,6 @@ terraform.lock.hcl
 
 # Ignore the lambda zip file
 lambda_function.zip
+
+# Ignore mac files
+.DS_Stores
