@@ -1,0 +1,85 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Creates an EC2 instance for use with the EFS instance setup
+
+Parameters: 
+  # fileSystemID:
+  #   Type: String
+  VPC:
+    Type: AWS::EC2::VPC::Id
+  Subnet:
+    Type: AWS::EC2::Subnet::Id
+
+Resources: 
+# need a security group allowing 443 and efs port
+  ec2SG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: EC2toEFS
+      GroupDescription: Allows SSM & EFS access
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          FromPort: 443
+          ToPort: 443
+          IpProtocol: tcp
+          Description: Allow 443/tcp in for SSM access
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all out
+          FromPort: 0
+          ToPort: 65535
+          IpProtocol: -1
+
+# make a role to attach to the instance profile
+  iamRole:
+    Type: AWS::IAM::Role
+    Properties:
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+              Action:
+                - 'sts:AssumeRole'
+
+# need an instance profile to allow efs access (will also need role)
+  instanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties: 
+      InstanceProfileName: ec2toefs
+      Roles: 
+        - !Ref iamRole
+
+  Instance:
+    Type: AWS::EC2::Instance
+    Properties: 
+      IamInstanceProfile: !Ref instanceProfile
+      ImageId: String
+      InstanceType: t2.micro
+      SecurityGroupIds: 
+        - !Ref ec2SG
+      SecurityGroups: 
+        - !Ref ec2SG
+      SubnetId: !Ref Subnet
+      Tags:
+      - Key: Name
+        Value: EFSAccessEC2
+      UserData: 
+        Fn::Base64:
+          !Sub |
+            #!/bin/bash
+            yum update -y
+            yum install -y amazon-efs-utils
+            apt-get -y install amazon-efs-utils
+            yum install -y nfs-utils
+            apt-get -y install nfs-common
+            file_system_id_1=fs-077194a1fef069da3
+            efs_mount_point_1=/mnt/efs/fs1
+            mkdir -p "${efs_mount_point_1}"
+            test -f "/sbin/mount.efs" && printf "\n${file_system_id_1}:/ ${efs_mount_point_1} efs tls,_netdev\n" >> /etc/fstab || printf "\n${file_system_id_1}.efs.ap-southeast-2.amazonaws.com:/ ${efs_mount_point_1} nfs4 nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport,_netdev 0 0\n" >> /etc/fstab
+            test -f "/sbin/mount.efs" && grep -ozP 'client-info]\nsource' '/etc/amazon/efs/efs-utils.conf'; if [[ $? == 1 ]]; then printf "\n[client-info]\nsource=liw\n" >> /etc/amazon/efs/efs-utils.conf; fi;
+            retryCnt=15; waitTime=30; while true; do mount -a -t efs,nfs4 defaults; if [ $? = 0 ] || [ $retryCnt -lt 1 ]; then echo File system mounted successfully; break; fi; echo File system not available, retrying to mount.; ((retryCnt--)); sleep $waitTime; done;
