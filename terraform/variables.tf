@@ -87,6 +87,7 @@ variable "ecsports" {
       cidr_block = ["0.0.0.0/0"]
     },
     {
+<<<<<<< HEAD
       type             = "egress"
       from_port        = "0"
       to_port          = "0"
@@ -125,6 +126,13 @@ variable "efsports" {
       protocol         = "-1"
       cidr_block      = ["0.0.0.0/0"]
       ipv6_cidr_block = ["::/0"]
+=======
+      type       = "egress"
+      from_port  = "0"
+      to_port    = "0"
+      protocol   = "-1"
+      cidr_block = ["0.0.0.0/0"]
+>>>>>>> e712ceed844608089334aec5d93975ed2f998d15
     }
   ]
 }
@@ -134,4 +142,16 @@ variable "sns_subscriptions" {
   default = [
     "fuckspam@knowhowit.com"
   ]
+}
+
+variable "itoc_role" {
+  description = "role arn for assume role"
+  type        = string
+  default     = "ItocAdmin"
+}
+
+variable "aws_account" {
+  description = "aws account number to assume into"
+  type        = string
+  default     = "665628331607"
 }

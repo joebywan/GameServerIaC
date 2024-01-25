@@ -18,6 +18,9 @@ resource "aws_route53_record" "game_server" {
   records = [
     "1.1.1.1"
   ]
+  lifecycle {
+      ignore_changes = [records]
+  }
 }
 
 /*

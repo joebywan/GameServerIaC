@@ -6,10 +6,10 @@ resource "aws_ecs_cluster" "ecs_cluster" {
   name               = var.game_name
   capacity_providers = ["FARGATE_SPOT"]
 
-  # setting {
-  #   name  = "containerInsights"
-  #   value = "enabled"
-  # }
+  setting {
+    name  = "containerInsights"
+    value = "enabled"
+  }
 }
 
 #----- ECS Service -----
