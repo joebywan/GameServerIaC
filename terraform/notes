@@ -1,1 +1,0 @@
-For some reason won't run unless I 'create' the default vpc first with: terraform apply -target="data.aws_subnet_ids.defaultVPCSubnetIds"

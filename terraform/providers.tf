@@ -7,11 +7,11 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "3.70.0"
+      version = ">3.70.0"
     }
     archive = {
       source  = "hashicorp/archive"
-      version = "2.2.0"
+      version = ">2.2.0"
     }
   }
 }
@@ -36,5 +36,6 @@ provider "aws" {
   alias   = "us-east-1"
   # assume_role {
   #   role_arn = "arn:aws:iam::942434513370:role/adminrole"
+  #   session_name = "test"
   # }
 }

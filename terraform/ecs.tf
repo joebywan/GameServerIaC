@@ -66,6 +66,15 @@ resource "aws_ecs_task_definition" "game_server_and_watchdog" {
             hostPort      = 25565
           }
         ]
+        logConfiguration = {
+          logDriver = "awslogs"
+          options = {
+            awslogs-create-group = "true"
+            awslogs-group = "${var.game_name}_logs"
+            awslogs-region = var.server_region
+            awslogs-stream-prefix = "awslogs-example"
+          }
+        }
         environment = [
           {
             name  = "EULA"

@@ -14,7 +14,7 @@ variable "aws_profile" {
   #Which AWS profile to use?  E.g. in the .aws/credentials file each profile is
   #preceeded by a [profile name] line. If we're using a non-default one, modify
   #it here.
-  default = "alternate"
+  default = "default"
 }
 
 variable "server_region" {
@@ -52,7 +52,7 @@ variable "hosted_zone" {
 
 variable "game_name" {
   description = "What is the game called?"
-  default     = "minecraft"
+  default     = "testgame"
 }
 
 variable "lambda_location" {
@@ -85,6 +85,46 @@ variable "ecsports" {
       to_port    = "25565"
       protocol   = "tcp"
       cidr_block = ["0.0.0.0/0"]
+    },
+    {
+      type             = "egress"
+      from_port        = "0"
+      to_port          = "0"
+      protocol         = "-1"
+      cidr_block      = ["0.0.0.0/0"]
+      ipv6_cidr_block = ["::/0"]
+    }
+  ]
+}
+
+variable "efsports" {
+  description = "ports required for the game being installed"
+  type = list(
+    object(
+      {
+        type       = string
+        from_port  = number
+        to_port    = number
+        protocol   = string
+        cidr_block = list(string)
+      }
+    )
+  )
+  default = [
+    {
+      type       = "ingress"
+      from_port  = "2049"
+      to_port    = "2049"
+      protocol   = "tcp"
+      cidr_block = ["0.0.0.0/0"]
+    },
+    {
+      type             = "egress"
+      from_port        = "0"
+      to_port          = "0"
+      protocol         = "-1"
+      cidr_block      = ["0.0.0.0/0"]
+      ipv6_cidr_block = ["::/0"]
     }
   ]
 }

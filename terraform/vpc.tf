@@ -46,7 +46,7 @@ resource "aws_security_group" "efs_sg" {
 }
 
 #Create security group rules
-resource "aws_security_group_rule" "rule" {
+resource "aws_security_group_rule" "ecs_sg_rule" {
   depends_on = [
     aws_security_group.ecs_sg
   ]
@@ -57,4 +57,17 @@ resource "aws_security_group_rule" "rule" {
   protocol          = var.ecsports[count.index].protocol
   security_group_id = aws_security_group.ecs_sg.id
   cidr_blocks       = var.ecsports[count.index].cidr_block
+}
+
+resource "aws_security_group_rule" "efs_sg_rule" {
+  depends_on = [
+    aws_security_group.efs_sg
+  ]
+  count             = length(var.efsports)
+  type              = var.efsports[count.index].type
+  from_port         = var.efsports[count.index].from_port
+  to_port           = var.efsports[count.index].to_port
+  protocol          = var.efsports[count.index].protocol
+  security_group_id = aws_security_group.efs_sg.id
+  cidr_blocks       = var.efsports[count.index].cidr_block
 }
