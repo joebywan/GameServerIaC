@@ -1,6 +1,7 @@
 #!/bin/bash
-CLUSTER="testgame"
-SERVICE="testgame-server"
+CLUSTER="palworld_cluster"
+SERVICE="palworld-service"
+REGION="ap-southeast-2"
 #TASK_DEFINITION="ark-server"
 #REVISION="1"
 DESIRED_COUNT=0
@@ -12,7 +13,7 @@ if [ -n "$1" ]; then DESIRED_COUNT=$1; fi
 
 sleep $(($SLEEPTIME))
 # Command to be executed, modifies the desired count (aka start the container)
-CURRENT_COUNT=$(aws ecs update-service --cluster $CLUSTER --service $SERVICE --desired-count "$DESIRED_COUNT" --query "service.desiredCount")
+CURRENT_COUNT=$(aws ecs update-service --region $REGION --cluster $CLUSTER --service $SERVICE --desired-count "$DESIRED_COUNT" --query "service.desiredCount")
 echo "Set current desiredCount to: $CURRENT_COUNT"
 
 if [ "$DESIRED_COUNT" -lt 1 ]
@@ -20,7 +21,7 @@ then
     TASKID=1
     while [[ $TASKID != None ]]
     do
-        TASKID=$(aws ecs list-tasks --cluster $CLUSTER --service-name $SERVICE --query "taskArns[0]" --output text)
+        TASKID=$(aws ecs list-tasks --region $REGION --cluster $CLUSTER --service-name $SERVICE --query "taskArns[0]" --output text)
     done
     echo "Server shut down"
 fi
