@@ -1,0 +1,1 @@
+terraformer import aws --resources=lambda --regions=us-east-1 --filter="Name=function_name;Value=minecraft-launcher"

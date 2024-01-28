@@ -87,7 +87,6 @@ variable "ecsports" {
       cidr_block = ["0.0.0.0/0"]
     },
     {
-<<<<<<< HEAD
       type             = "egress"
       from_port        = "0"
       to_port          = "0"
@@ -126,13 +125,6 @@ variable "efsports" {
       protocol         = "-1"
       cidr_block      = ["0.0.0.0/0"]
       ipv6_cidr_block = ["::/0"]
-=======
-      type       = "egress"
-      from_port  = "0"
-      to_port    = "0"
-      protocol   = "-1"
-      cidr_block = ["0.0.0.0/0"]
->>>>>>> e712ceed844608089334aec5d93975ed2f998d15
     }
   ]
 }
