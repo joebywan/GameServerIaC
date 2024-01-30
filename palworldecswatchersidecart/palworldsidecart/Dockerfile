@@ -1,7 +1,7 @@
 FROM sleavely/node-awscli
 
 # Install dependencies for wget and unzip
-RUN apt-get update && apt-get install -y wget unzip
+RUN apt-get update && apt-get install -y wget unzip netcat-openbsd
 
 # Download and extract ARRCON
 RUN wget https://github.com/radj307/ARRCON/releases/download/3.3.7/ARRCON-3.3.7-Linux.zip \

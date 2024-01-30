@@ -5,7 +5,7 @@ locals {
   workload_protocol       = "udp"
   workload_password       = "worldofpals"
   workload_admin_password = "someAdminPassword"
-  workload_rcon_port      = "25575"
+  workload_rcon_port      = 25575
 
   vpc_id          = "vpc-0b774b4479ea3baa6"
   hosted_zone     = "ecs.knowhowit.com"
@@ -21,9 +21,9 @@ locals {
     },
     # {
     #   type       = "ingress"
-    #   from_port  = 25575
-    #   to_port    = 25575
-    #   protocol   = "udp"
+    #   from_port  = local.workload_rcon_port
+    #   to_port    = local.workload_rcon_port
+    #   protocol   = "tcp"
     #   cidr_block = ["0.0.0.0/0"]
     # },
     {
@@ -33,13 +33,6 @@ locals {
       protocol   = "udp"
       cidr_block = ["0.0.0.0/0"]
     },
-    # {
-    #   type       = "ingress"
-    #   from_port  = 27016
-    #   to_port    = 27016
-    #   protocol   = "udp"
-    #   cidr_block = ["0.0.0.0/0"]
-    # },
     {
       type            = "egress"
       from_port       = 0
@@ -74,7 +67,7 @@ locals {
 
   workload_container = {
     name      = "${local.workload_name}-server"
-    image     = "thijsvanloef/palworld-server-docker"
+    image     = "thijsvanloef/palworld-server-docker:v0.18"
     cpu       = 0
     essential = true
     "environment" : [
@@ -82,20 +75,19 @@ locals {
       { "name" : "PUID", "value" : "1000" },
       { "name" : "PGID", "value" : "1000" },
       { "name" : "PLAYERS", "value" : "16" },
+      { "name" : "DEATH_PENALTY", "value" : "1" },
+      { "name" : "PAL_EGG_DEFAULT_HATCHING_TIME", "value" : "3" },
+      { "name" : "BACKUP_ENABLED", "value" : "TRUE" },
       { "name" : "MULTITHREADING", "value" : "TRUE" },
       { "name" : "RCON_ENABLED", "value" : "TRUE" },
       { "name" : "RCON_PORT", "value" : tostring(local.workload_rcon_port) },
-      { "name" : "COMMUNITY", "value" : "false" }, # Do you want it added to the server list or not?
-      // Uncomment and add the following lines if COMMUNITY is set to "true"
+      # { "name" : "COMMUNITY", "value" : "false" }, # Do you want it added to the server list or not?
+      # Uncomment and add the following lines if COMMUNITY is set to "true"
       { "name" : "SERVER_PASSWORD", "value" : local.workload_password },
       { "name" : "SERVER_NAME", "value" : "Damage Inc Palworld Server" },
       { "name" : "ADMIN_PASSWORD", "value" : local.workload_admin_password },
       { "name" : "TZ", "value" : "Australia/Brisbane" },
-    ],
-    # portMappings = [ # Retained if I need to revert to static definition of ports required.
-    #     { containerPort = 2456, hostPort = 2456, protocol = "udp" },
-    #     { containerPort = 2457, hostPort = 2457, protocol = "udp" }
-    # ]        
+    ],     
     portMappings = [for port in local.workload_ports : { # won't work with ranges
       containerPort = port.from_port
       hostPort      = port.from_port
@@ -127,7 +119,7 @@ locals {
       { "name" : "SHUTDOWNMIN", "value" : "20" }, # Numbers must be strings
       { "name" : "HOST", "value" : "127.0.0.1" },
       { "name" : "PORT", "value" : tostring(local.workload_rcon_port) }, # Numbers must be strings
-      { "name" : "ADMINPASSWORD", "value" : "${local.workload_admin_password}" },
+      { "name" : "ADMINPASSWORD", "value" : local.workload_admin_password },
       { "name" : "SNSTOPIC", "value" : "arn:aws:sns:ap-southeast-2:746627761656:minecraft-notifications" },
     ]
     logConfiguration = {

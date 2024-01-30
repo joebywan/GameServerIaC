@@ -7,7 +7,7 @@ resource "aws_ecs_task_definition" "this" {
   cpu                      = 2048
   execution_role_arn       = "arn:aws:iam::746627761656:role/ecsTaskExecutionRole"
   family                   = "${local.workload_name}-server"
-  memory                   = 8192
+  memory                   = 16384
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
 

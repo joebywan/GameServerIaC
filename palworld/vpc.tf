@@ -1,6 +1,6 @@
 #Create Security group to allow ECS in on required ports
 resource "aws_security_group" "ecs_sg" {
-  name        = "allow_ecs_gameServer"
+  name        = "${local.workload_name}-sg"
   description = "port(s) for gameserver"
   vpc_id      = local.vpc_id
 }
