@@ -1,15 +1,27 @@
+# Get the VPC from id
+data "aws_vpc" "this" {
+  id = local.vpc_id
+}
+
+data "aws_subnets" "this" {
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.this.id]
+  }
+}
+
 #Create Security group to allow ECS in on required ports
 resource "aws_security_group" "ecs_sg" {
   name        = "${local.workload_name}-sg"
   description = "port(s) for gameserver"
-  vpc_id      = local.vpc_id
+  vpc_id      = data.aws_vpc.this.id
 }
 
 #Create security group to allow NFS ports for EFS
 resource "aws_security_group" "efs_sg" {
   name        = "allow_nfs_ports"
   description = "Allow NFS ports through so EFS can be accessed"
-  vpc_id      = local.vpc_id
+  vpc_id      = data.aws_vpc.this.id
 }
 
 # Dynamic Security Group Rules for Workload

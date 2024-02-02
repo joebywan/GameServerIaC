@@ -174,13 +174,14 @@ function is_server_up {
   while true
   do
 
-    if nc -zvu 127.0.0.1 25575; then
-        echo "Port 25575 is open. Proceeding with RCON connection."
-        # existing RCON connection logic here
-    else
-        echo "Port 25575 is not open. Aborting RCON connection."
-        # handle the error as needed
-    fi
+    # Doesn't fucking work
+    # if nc -zvu 127.0.0.1 25575; then
+    #     echo "Port 25575 is open. Proceeding with RCON connection."
+    #     # existing RCON connection logic here
+    # else
+    #     echo "Port 25575 is not open. Aborting RCON connection."
+    #     # handle the error as needed
+    # fi
 
     # Using RCON to check server status
     CAPTUREOUTPUT=$(echo 'showplayers' | ./usr/local/bin/ARRCON --host "$HOST" --port "$PORT" --pass $ADMINPASSWORD 2>&1)

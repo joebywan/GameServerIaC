@@ -1,6 +1,6 @@
 #!/bin/bash
 CLUSTER="palworld_cluster"
-SERVICE="palworld-service"
+SERVICE="palworld_service"
 REGION="ap-southeast-2"
 #TASK_DEFINITION="ark-server"
 #REVISION="1"

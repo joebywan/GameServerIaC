@@ -9,6 +9,7 @@ locals {
 
   vpc_id          = "vpc-0b774b4479ea3baa6"
   hosted_zone     = "ecs.knowhowit.com"
+  efs_name        = "minecraftStore"
   lambda_location = "scripts/lambda_function.py"
 
   workload_ports = [
@@ -65,6 +66,7 @@ locals {
     DeployedVia = "Terraform"
   }
 
+
   workload_container = {
     name      = "${local.workload_name}-server"
     image     = "thijsvanloef/palworld-server-docker:v0.18"
@@ -76,7 +78,7 @@ locals {
       { "name" : "PGID", "value" : "1000" },
       { "name" : "PLAYERS", "value" : "16" },
       { "name" : "DEATH_PENALTY", "value" : "1" },
-      { "name" : "PAL_EGG_DEFAULT_HATCHING_TIME", "value" : "3" },
+      { "name" : "PAL_EGG_DEFAULT_HATCHING_TIME", "value" : "0.1" },
       { "name" : "BACKUP_ENABLED", "value" : "TRUE" },
       { "name" : "MULTITHREADING", "value" : "TRUE" },
       { "name" : "RCON_ENABLED", "value" : "TRUE" },
@@ -87,7 +89,7 @@ locals {
       { "name" : "SERVER_NAME", "value" : "Damage Inc Palworld Server" },
       { "name" : "ADMIN_PASSWORD", "value" : local.workload_admin_password },
       { "name" : "TZ", "value" : "Australia/Brisbane" },
-    ],     
+    ],
     portMappings = [for port in local.workload_ports : { # won't work with ranges
       containerPort = port.from_port
       hostPort      = port.from_port

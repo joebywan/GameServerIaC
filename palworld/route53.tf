@@ -1,9 +1,3 @@
-# Lookup the zone we're going to use
-data "aws_route53_zone" "this" {
-  name         = local.hosted_zone
-  private_zone = false
-}
-
 /*
 Create the record that ECS will modify when the game server turns on.
 1.1.1.1 will be changed, doesn't matter if Terraform resets it.

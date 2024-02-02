@@ -5,7 +5,7 @@ resource "aws_ecs_task_definition" "this" {
   container_definitions = jsonencode([local.workload_container, local.ecswatcher_container])
   # container_definitions    = jsonencode([local.workload_container])
   cpu                      = 2048
-  execution_role_arn       = "arn:aws:iam::746627761656:role/ecsTaskExecutionRole"
+  execution_role_arn       = aws_iam_role.ecsTaskExecutionRole.arn
   family                   = "${local.workload_name}-server"
   memory                   = 16384
   network_mode             = "awsvpc"
@@ -15,7 +15,7 @@ resource "aws_ecs_task_definition" "this" {
     operating_system_family = "LINUX"
   }
 
-  task_role_arn = "arn:aws:iam::746627761656:role/ecs.task.minecraft-server"
+  task_role_arn = aws_iam_role.ecs_task_role.arn
 
   volume {
     efs_volume_configuration {
@@ -24,7 +24,7 @@ resource "aws_ecs_task_definition" "this" {
         iam             = "DISABLED"
       }
 
-      file_system_id          = "fs-077194a1fef069da3"
+      file_system_id          = data.aws_efs_file_system.this.file_system_id
       root_directory          = "/"
       transit_encryption      = "ENABLED"
       transit_encryption_port = "0"

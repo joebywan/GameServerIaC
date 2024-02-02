@@ -16,19 +16,19 @@ resource "aws_ecs_service" "this" {
   deployment_controller {
     type = "ECS"
   }
-
+  # iam_role                           = aws_iam_role.ecs_service_role.arn
   deployment_maximum_percent         = "200"
   deployment_minimum_healthy_percent = "100"
   desired_count                      = "0"
   enable_ecs_managed_tags            = "false"
   enable_execute_command             = "false"
   health_check_grace_period_seconds  = "0"
-  name                               = "${local.workload_name}-service"
+  name                               = "${local.workload_name}_service"
 
   network_configuration {
     assign_public_ip = "true"
     security_groups  = [aws_security_group.ecs_sg.id]
-    subnets          = ["subnet-0400a0e6fcf46a76f", "subnet-075d403197fd04b82", "subnet-0ce4494e5ca93063b"] # To be updated
+    subnets          = data.aws_subnets.this.ids
   }
 
   platform_version    = "LATEST"

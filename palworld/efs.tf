@@ -1,6 +1,6 @@
 #Access point for EFS
 resource "aws_efs_access_point" "this" {
-  file_system_id = "fs-077194a1fef069da3"
+  file_system_id = data.aws_efs_file_system.this.file_system_id
   root_directory {
     path = "/${local.workload_name}"
     creation_info {
