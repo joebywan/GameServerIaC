@@ -1,0 +1,5 @@
+Subscription filter settings:
+Filter name: valheim
+Filter pattern: [,,,url="valheim.ecs.knowhowit.com",...]
+Destination ARN: arn:aws:lambda:us-east-1:746627761656:function:valheim-launcher
+Subscription Filter type: Log group-level
