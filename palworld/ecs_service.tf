@@ -35,4 +35,11 @@ resource "aws_ecs_service" "this" {
   scheduling_strategy = "REPLICA"
 
   task_definition = aws_ecs_task_definition.this.family
+
+  lifecycle {
+      ignore_changes = [
+        task_definition,
+        desired_count
+      ]
+  }
 }

@@ -78,7 +78,7 @@ locals {
       { "name" : "PGID", "value" : "1000" },
       { "name" : "PLAYERS", "value" : "16" },
       { "name" : "DEATH_PENALTY", "value" : "1" },
-      { "name" : "PAL_EGG_DEFAULT_HATCHING_TIME", "value" : "0.1" },
+      { "name" : "PAL_EGG_DEFAULT_HATCHING_TIME", "value" : "5" },
       { "name" : "BACKUP_ENABLED", "value" : "TRUE" },
       { "name" : "MULTITHREADING", "value" : "TRUE" },
       { "name" : "RCON_ENABLED", "value" : "TRUE" },

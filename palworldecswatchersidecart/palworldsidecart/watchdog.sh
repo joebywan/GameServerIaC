@@ -52,7 +52,7 @@ SNSTOPIC      == $SNSTOPIC"
 }
 
 function send_notification {
-  [ "$1" = "startup" ] && MESSAGETEXT="${SERVICE} container online"
+  [ "$1" = "startup" ] && MESSAGETEXT="Starting up ${SERVICE}"
   [ "$1" = "shutdown" ] && MESSAGETEXT="Shutting down ${SERVICE}"
 
   ## SNS Option

@@ -1,6 +1,11 @@
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
+data "aws_region" "global" {
+  provider = aws.us-east-1
+}
+
+
 data "aws_efs_file_system" "this" {
   tags = {
     Name = "minecraftStore"

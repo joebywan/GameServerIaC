@@ -1,0 +1,9 @@
+color_codes = {
+    "green": 65280,
+    "orange": 16753920,
+    "yellow": 16776960,
+    "red": 16711680
+}
+
+format discord webhook events: https://discohook.org/
+

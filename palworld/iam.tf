@@ -24,7 +24,6 @@ resource "aws_iam_role" "ecsTaskExecutionRole" {
       "Principal": {
         "Service": "ecs-tasks.amazonaws.com"
       },
-      "Sid": ""
     }
   ],
   "Version": "2008-10-17"
@@ -114,4 +113,55 @@ resource "aws_iam_policy" "ecs_task_policy" {
 resource "aws_iam_role_policy_attachment" "ecs_task_policy_attach" {
     role       = aws_iam_role.ecs_task_role.name
     policy_arn = aws_iam_policy.ecs_task_policy.arn
+}
+
+# Lambda function IAM resources
+resource "aws_iam_policy" "lambda_discord_policy" {
+    name        = "${local.workload_name}_lambda_discord_logging_and_ssm_access"
+    path        = "/"
+    description = "Allow Lambda to log to CloudWatch and retrieve SSM parameters"
+
+    policy = jsonencode({
+        Version: "2012-10-17",
+        Statement: [
+            {
+                Effect: "Allow",
+                Action: [
+                    "logs:CreateLogGroup",
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents"
+                ],
+                Resource: "arn:aws:logs:${data.aws_region.global.name}:${data.aws_caller_identity.current.id}:log-group:/aws/lambda/${local.workload_name}_discord_notifications:*"
+            }, 
+            {
+                Effect: "Allow",
+                Action: "ssm:GetParameter",
+                Resource: [
+                    aws_ssm_parameter.discord_webhook_url.arn,
+                ]
+            }
+        ]
+    })
+}
+
+resource "aws_iam_role" "lambda_discord_execution_role" {
+    name = "${local.workload_name}_discord_lambda_execution_role"
+
+    assume_role_policy = jsonencode({
+        Version: "2012-10-17",
+        Statement: [{
+            Action: "sts:AssumeRole",
+            Effect: "Allow",
+            Principal: {
+                Service: "lambda.amazonaws.com"
+            },
+        }],
+    })
+}
+
+# Attach the IAM policy to the Lambda execution role
+resource "aws_iam_policy_attachment" "lambda_execution_policy_attachment" {
+    name       = "lambda_execution_policy_attachment"
+    roles      = [aws_iam_role.lambda_discord_execution_role.name]
+    policy_arn = aws_iam_policy.lambda_discord_policy.arn
 }

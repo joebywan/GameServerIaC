@@ -6,7 +6,7 @@ resource "aws_ecs_task_definition" "this" {
   # container_definitions    = jsonencode([local.workload_container])
   cpu                      = 2048
   execution_role_arn       = aws_iam_role.ecsTaskExecutionRole.arn
-  family                   = "${local.workload_name}-server"
+  family                   = "${local.workload_name}_server"
   memory                   = 16384
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
