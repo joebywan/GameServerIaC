@@ -2,8 +2,6 @@
 CLUSTER="palworld_cluster"
 SERVICE="palworld_service"
 REGION="ap-southeast-2"
-#TASK_DEFINITION="ark-server"
-#REVISION="1"
 DESIRED_COUNT=0
 MINUTES=60
 SLEEPTIME=$((0*$MINUTES))

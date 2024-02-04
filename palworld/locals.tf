@@ -122,7 +122,7 @@ locals {
       { "name" : "HOST", "value" : "127.0.0.1" },
       { "name" : "PORT", "value" : tostring(local.workload_rcon_port) }, # Numbers must be strings
       { "name" : "ADMINPASSWORD", "value" : local.workload_admin_password },
-      { "name" : "SNSTOPIC", "value" : "arn:aws:sns:ap-southeast-2:746627761656:minecraft-notifications" },
+      { "name" : "SNSTOPIC", "value" : aws_sns_topic.this.arn },
     ]
     logConfiguration = {
       logDriver = "awslogs"

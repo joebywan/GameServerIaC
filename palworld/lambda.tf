@@ -5,7 +5,6 @@ data "archive_file" "lambda_zip" {
 }
 
 resource "aws_lambda_layer_version" "requests_layer" {
-    provider = aws.us-east-1
     filename   = "${path.module}/scripts/requests_layer.zip"
     layer_name = "${local.workload_name}_requests_layer"
 
@@ -13,7 +12,6 @@ resource "aws_lambda_layer_version" "requests_layer" {
 }
 
 resource "aws_lambda_function" "discord_notifications" {
-    provider = aws.us-east-1
     function_name = "${local.workload_name}_discord_notifications"
     handler       = "lambda_function.lambda_handler"
     role          = aws_iam_role.lambda_discord_execution_role.arn
@@ -31,3 +29,11 @@ resource "aws_lambda_function" "discord_notifications" {
     }
 }
 
+# Give permission to SNS to invoke the function
+resource "aws_lambda_permission" "allow_sns_to_invoke_lambda" {
+    statement_id  = "AllowExecutionFromSNS"
+    action        = "lambda:InvokeFunction"
+    function_name = aws_lambda_function.discord_notifications.function_name
+    principal     = "sns.amazonaws.com"
+    source_arn    = aws_sns_topic.this.arn
+}

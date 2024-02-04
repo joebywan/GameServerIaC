@@ -1,5 +1,4 @@
 resource "aws_ssm_parameter" "discord_webhook_url" {
-    provider = aws.us-east-1
     name        = "${local.workload_name}_discord_webhook_url"
     description = "Discord webhook URL for ${local.workload_name}"
     type        = "SecureString"

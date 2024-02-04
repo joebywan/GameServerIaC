@@ -131,7 +131,7 @@ resource "aws_iam_policy" "lambda_discord_policy" {
                     "logs:CreateLogStream",
                     "logs:PutLogEvents"
                 ],
-                Resource: "arn:aws:logs:${data.aws_region.global.name}:${data.aws_caller_identity.current.id}:log-group:/aws/lambda/${local.workload_name}_discord_notifications:*"
+                Resource: "${aws_cloudwatch_log_group.discord_notifications.arn}:*"
             }, 
             {
                 Effect: "Allow",
